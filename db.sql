@@ -31,7 +31,7 @@ CREATE TABLE zaposlenik (
     ime VARCHAR(50) NOT NULL,
     prezime VARCHAR(50) NOT NULL,
     mjesto_rada INT NOT NULL, -- (odjel_na_lokaciji id)
-    placa DECIMAL NOT NULL,
+    placa DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (mjesto_rada) REFERENCES odjel_na_lokaciji(id)
 );
 
@@ -51,9 +51,8 @@ CREATE TABLE kupac (
 CREATE TABLE proizvod (
 	id INT AUTO_INCREMENT PRIMARY KEY,
     naziv VARCHAR(100) NOT NULL,
-    nabavna_cijena DECIMAL NOT NULL,
-    prodajna_cijena DECIMAL NOT NULL
-	-- potencijalno dodati sveukupno stanje atribut
+    nabavna_cijena DECIMAL(10, 2) NOT NULL,
+    prodajna_cijena DECIMAL(10, 2) NOT NULL
 );
 
 CREATE TABLE predracun (
@@ -61,13 +60,10 @@ CREATE TABLE predracun (
     kupac_id INT,
     zaposlenik_id INT NOT NULL,
     datum DATETIME NOT NULL,
-    cijena DECIMAL NOT NULL,
+    cijena DECIMAL(10, 2) NOT NULL,
     nacin_placanja VARCHAR(30) NOT NULL,
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
     FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id)
-    -- nacin placanja atribut ne znam da li je potreban i sta raditi sa njim
-	-- ne znam treba li vrsta jer se podrazumijeva da je poslovni???
-    -- ne znam da li je potreban zaposlenik na predracunu uopce
 );
 
 CREATE TABLE racun (
@@ -75,20 +71,19 @@ CREATE TABLE racun (
     kupac_id INT,
     zaposlenik_id INT NOT NULL,
     datum DATETIME NOT NULL,
-    cijena DECIMAL NOT NULL,
+    cijena DECIMAL(10, 2) NOT NULL,
     vrsta VARCHAR(30) NOT NULL,
     nacin_placanja VARCHAR(30) NOT NULL,
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
     FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id),
     CONSTRAINT vrsta_racuna_provjera CHECK (vrsta = 'obicni' OR vrsta = "R1")
-    -- nacin placanja ne znam da li je potreban i sta raditi sa njim
 );
 
 CREATE TABLE nabava (
 	id INT AUTO_INCREMENT PRIMARY KEY,
     lokacija_id INT,
     datum DATETIME,
-    cijena DECIMAL NOT NULL,
+    cijena DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (lokacija_id) REFERENCES lokacija(id)
 );
 
