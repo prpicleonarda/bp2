@@ -73,7 +73,6 @@ CREATE TABLE predracun (
     kupac_id INT,
     zaposlenik_id INT NOT NULL,
     datum DATETIME NOT NULL,
-    cijena DECIMAL(10, 2) NOT NULL,
     nacin_placanja VARCHAR(30) NOT NULL,
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
     FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id)
@@ -84,7 +83,6 @@ CREATE TABLE racun (
     kupac_id INT,
     zaposlenik_id INT NOT NULL,
     datum DATETIME NOT NULL,
-    cijena DECIMAL(10, 2) NOT NULL,
     vrsta VARCHAR(30) NOT NULL,
     nacin_placanja VARCHAR(30) NOT NULL,
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
@@ -96,7 +94,6 @@ CREATE TABLE nabava (
 	id INT AUTO_INCREMENT PRIMARY KEY,
     lokacija_id INT,
     datum DATETIME,
-    cijena DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (lokacija_id) REFERENCES lokacija(id)
 );
 
@@ -284,23 +281,23 @@ INSERT INTO kategorija(naziv, odjel_id) VALUES
 ("Sredstva za čiščenje i pranje", 4);
 
 INSERT INTO proizvod(naziv, nabavna_cijena, prodajna_cijena, kategorija_id) VALUES
-("Perilica Rublja Končar", 180, 450, 1),
-("Perilica Rublja Candy", 150, 370, 1),
+("Perilica rublja Končar", 180, 450, 1),
+("Perilica rublja Candy", 150, 370, 1),
 ("Štednjak Gorenje", 165, 430, 1),
 ("Hladnjak Gorenje", 485, 1057, 1),
 ("Hladnjak Hisense", 200, 480, 1),
 ("Napa Beko", 85, 205, 1),
 ("Klima uređaj Vivax", 140, 392, 2),
-("Klima uređaj Mitsubishi", 280, 710, 2),
+("Klima uređaj Mitsubishi", 279.99, 709.99, 2),
 ("Peć na drva Alfa-plam", 110, 273, 2),
 ("Električna grijalica Iskra", 8, 18.5, 2),
 ("Uljni radijator Blitz", 40, 93, 2),
 ("Usisavač bez vrećice Rowenta", 57, 119, 3),
 ("Štapni usisavač Electrolux", 107, 219, 3),
-("Električno glačalo Tefal", 63, 140, 3),
-("Mikrovalna pećnica Hisense", 47, 110, 3),
-("Blender Beko", 19, 46, 3),
-("Preklopni toster Beko", 9, 30, 3),
+("Električno glačalo Tefal", 63.9, 139.9, 3),
+("Mikrovalna pećnica Hisense", 47.5, 109.9, 3),
+("Blender Beko", 19, 45.99, 3),
+("Preklopni toster Beko", 9, 29.99, 3),
 ("LED TV Telefunken", 103, 260, 4),
 ("LED TV Grundig", 107, 250, 4),
 ("LED TV Philips", 140, 340, 4),
@@ -366,3 +363,33 @@ INSERT INTO proizvod(naziv, nabavna_cijena, prodajna_cijena, kategorija_id) VALU
 ("Ornel omekšivač 2.4l", 2.35, 6.63, 14),
 ("Čarli classic deterdžent 450ml", 0.42, 1.45, 14);
 
+INSERT INTO racun(kupac_id, zaposlenik_id, datum, vrsta, nacin_placanja) VALUES
+(NULL, 1, NOW(), "obicni", "POS"),
+(1, 2, NOW(), "obicni", "POS");
+
+INSERT INTO racun_stavka(racun_id, proizvod_id, kolicina) VALUES
+(1, 1, 1),
+(1, 16, 1),
+(1, 31, 2),
+(1, 56, 3),
+(2, 53, 3),
+(2, 52, 2),
+(2, 70, 2);
+
+CREATE OR REPLACE VIEW pregled_stavki_racuna AS
+	SELECT racun_id, p.naziv, p.prodajna_cijena AS cijena , rs.kolicina, (p.prodajna_cijena * kolicina) AS iznos
+		FROM racun_stavka AS rs
+		INNER JOIN racun AS r ON r.id = rs.racun_id
+		INNER JOIN proizvod AS p ON rs.proizvod_id = p.id;
+
+CREATE OR REPLACE VIEW pregled_racuna AS
+	SELECT 	r.id AS racun_id,
+			CONCAT(k.ime, " ", k.prezime) AS kupac,
+			CONCAT(z.ime, " ", z.prezime) AS zaposlenik,
+			datum,
+			SUM(iznos) AS ukupan_iznos
+		FROM racun AS r
+		LEFT JOIN kupac AS k ON r.kupac_id = k.id
+		LEFT JOIN zaposlenik AS z ON r.zaposlenik_id = z.id
+		LEFT JOIN pregled_stavki_racuna AS psr ON psr.racun_id = r.id
+		GROUP BY r.id;
