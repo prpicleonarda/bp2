@@ -83,11 +83,9 @@ CREATE TABLE racun (
     kupac_id INT,
     zaposlenik_id INT NOT NULL,
     datum DATETIME NOT NULL,
-    vrsta VARCHAR(30) NOT NULL,
     nacin_placanja VARCHAR(30) NOT NULL,
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
-    FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id),
-    CONSTRAINT vrsta_racuna_provjera CHECK (vrsta = 'obicni' OR vrsta = "R1")
+    FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id)
 );
 
 CREATE TABLE nabava (
@@ -363,9 +361,10 @@ INSERT INTO proizvod(naziv, nabavna_cijena, prodajna_cijena, kategorija_id) VALU
 ("Ornel omekšivač 2.4l", 2.35, 6.63, 14),
 ("Čarli classic deterdžent 450ml", 0.42, 1.45, 14);
 
-INSERT INTO racun(kupac_id, zaposlenik_id, datum, vrsta, nacin_placanja) VALUES
-(NULL, 1, NOW(), "obicni", "POS"),
-(1, 2, NOW(), "obicni", "POS");
+INSERT INTO racun(kupac_id, zaposlenik_id, datum, nacin_placanja) VALUES
+(NULL, 1, NOW(), "POS"),
+(1, 2, NOW(), "POS"),
+(4, 10, NOW(), "POS");
 
 INSERT INTO racun_stavka(racun_id, proizvod_id, kolicina) VALUES
 (1, 1, 1),
@@ -374,7 +373,10 @@ INSERT INTO racun_stavka(racun_id, proizvod_id, kolicina) VALUES
 (1, 56, 3),
 (2, 53, 3),
 (2, 52, 2),
-(2, 70, 2);
+(2, 70, 2),
+(3, 43, 1),
+(3, 46, 2),
+(3, 2, 1);
 
 CREATE OR REPLACE VIEW pregled_stavki_racuna AS
 	SELECT racun_id, p.naziv, p.prodajna_cijena AS cijena , rs.kolicina, (p.prodajna_cijena * kolicina) AS iznos
@@ -386,10 +388,15 @@ CREATE OR REPLACE VIEW pregled_racuna AS
 	SELECT 	r.id AS racun_id,
 			CONCAT(k.ime, " ", k.prezime) AS kupac,
 			CONCAT(z.ime, " ", z.prezime) AS zaposlenik,
-			datum,
-			SUM(iznos) AS ukupan_iznos
+			datum, vrsta,
+			SUM(iznos) AS ukupan_iznos, IF(k.tip = "poslovni", 25, kb.popust) AS popust, 
+            ROUND(IF(k.tip = "poslovni", (SUM(iznos) * 3/4), (SUM(iznos) - SUM(iznos) * popust / 100)), 2) AS nakon_popusta
 		FROM racun AS r
 		LEFT JOIN kupac AS k ON r.kupac_id = k.id
 		LEFT JOIN zaposlenik AS z ON r.zaposlenik_id = z.id
 		LEFT JOIN pregled_stavki_racuna AS psr ON psr.racun_id = r.id
+        LEFT JOIN klub AS kb ON k.klub_id = kb.id
 		GROUP BY r.id;
+        
+SELECT * FROM pregled_stavki_racuna;
+SELECT * FROM pregled_racuna;
