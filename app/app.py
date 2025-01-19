@@ -1,7 +1,10 @@
 from flask import Flask, jsonify
 from flask_mysqldb import MySQL
+from flask_cors import CORS  # Import Flask-CORS
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes by default
+
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] = 'root'
@@ -12,13 +15,22 @@ mysql = MySQL(app)
 def hello_world():
     return 'Hello, World!'
 
-@app.route('/data', methods=['GET'])
+@app.route('/klub', methods=['GET'])
 def get_data():
     cur = mysql.connection.cursor()
     cur.execute(''' SELECT * FROM klub ''')
     data = cur.fetchall()
     cur.close()
     return jsonify(data)
+
+@app.route('/lokacija', methods=['GET'])
+def get_players():
+    cur = mysql.connection.cursor()
+    cur.execute(''' SELECT * FROM lokacija ''')
+    data = cur.fetchall()
+    cur.close()
+    return jsonify(data)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
