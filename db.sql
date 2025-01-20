@@ -388,7 +388,7 @@ CREATE OR REPLACE VIEW pregled_racuna AS
 	SELECT 	r.id AS racun_id,
 			CONCAT(k.ime, " ", k.prezime) AS kupac,
 			CONCAT(z.ime, " ", z.prezime) AS zaposlenik,
-			datum, vrsta,
+			datum, 
 			SUM(iznos) AS ukupan_iznos, IF(k.tip = "poslovni", 25, kb.popust) AS popust, 
             ROUND(IF(k.tip = "poslovni", (SUM(iznos) * 3/4), (SUM(iznos) - SUM(iznos) * popust / 100)), 2) AS nakon_popusta
 		FROM racun AS r
