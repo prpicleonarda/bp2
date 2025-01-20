@@ -25,13 +25,28 @@ def get_data():
     return jsonify(data)
 
 @app.route('/lokacija', methods=['GET'])
-def get_players():
+def get_lokacija():
     cur = mysql.connection.cursor()
     cur.execute(''' SELECT * FROM lokacija ''')
     data = cur.fetchall()
     cur.close()
     return jsonify(data)
 
+@app.route('/pregled_stavki_racuna', methods=['GET'])  
+def get_stavke_racuna():
+    cur = mysql.connection.cursor()
+    cur.execute(''' SELECT * FROM pregled_stavki_racuna ''')
+    data = cur.fetchall()
+    cur.close()
+    return jsonify(data)	
+
+@app.route('/pregled_racuna', methods=['GET'])
+def get_racuni():
+    cur = mysql.connection.cursor()
+    cur.execute(''' SELECT * FROM pregled_racuna ''')
+    data = cur.fetchall()
+    cur.close()
+    return jsonify(data)
 
 if __name__ == '__main__':
     app.run(debug=True)
