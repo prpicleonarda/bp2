@@ -85,7 +85,8 @@ CREATE TABLE racun (
     datum DATETIME NOT NULL,
     nacin_placanja VARCHAR(30) NOT NULL,
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
-    FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id)
+    FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id),
+    CONSTRAINT provjera_nacina_placanja CHECK (nacin_placanja = "POS" OR nacin_placanja = "gotovina")
 );
 
 CREATE TABLE nabava (
@@ -364,7 +365,8 @@ INSERT INTO proizvod(naziv, nabavna_cijena, prodajna_cijena, kategorija_id) VALU
 INSERT INTO racun(kupac_id, zaposlenik_id, datum, nacin_placanja) VALUES
 (NULL, 1, NOW(), "POS"),
 (1, 2, NOW(), "POS"),
-(4, 10, NOW(), "POS");
+(4, 10, NOW(), "POS"),
+(NULL, 5, NOW(), "gotovina");
 
 INSERT INTO racun_stavka(racun_id, proizvod_id, kolicina) VALUES
 (1, 1, 1),
@@ -388,7 +390,7 @@ CREATE OR REPLACE VIEW pregled_racuna AS
 	SELECT 	r.id AS racun_id,
 			CONCAT(k.ime, " ", k.prezime) AS kupac,
 			CONCAT(z.ime, " ", z.prezime) AS zaposlenik,
-			datum, 
+			datum, nacin_placanja,
 			SUM(iznos) AS ukupan_iznos, IF(k.tip = "poslovni", 25, kb.popust) AS popust, 
             ROUND(IF(k.tip = "poslovni", (SUM(iznos) * 3/4), (SUM(iznos) - SUM(iznos) * popust / 100)), 2) AS nakon_popusta
 		FROM racun AS r
@@ -397,6 +399,45 @@ CREATE OR REPLACE VIEW pregled_racuna AS
 		LEFT JOIN pregled_stavki_racuna AS psr ON psr.racun_id = r.id
         LEFT JOIN klub AS kb ON k.klub_id = kb.id
 		GROUP BY r.id;
-        
-SELECT * FROM pregled_stavki_racuna;
-SELECT * FROM pregled_racuna;
+       
+       
+-- PROCEDURA ZA STVARANJE RACUNA       
+       
+DELIMITER //
+
+CREATE PROCEDURE stvori_racun(
+	IN k_id INT,
+    IN z_id INT,
+    IN nacin_placanja VARCHAR(50)
+)
+BEGIN
+    INSERT INTO racun(kupac_id, zaposlenik_id, datum, nacin_placanja) VALUES 
+    (k_id, z_id, NOW(), nacin_placanja);
+END //
+
+DELIMITER ;
+
+-- PROCEDURA ZA POPUNJAVANJE RACUNA
+
+DELIMITER //
+CREATE PROCEDURE dodaj_stavke(IN r_id INT)
+BEGIN
+	DECLARE p_id, p_kolicina INTEGER;
+	DECLARE finished INTEGER DEFAULT 0;
+	DECLARE cur CURSOR FOR
+		SELECT proizvod_id, kolicina
+			FROM temp_t;
+			
+	DECLARE EXIT HANDLER FOR NOT FOUND SET finished = 1;
+	OPEN cur;
+		petlja: LOOP
+		FETCH cur INTO p_id, p_kolicina;
+			IF finished=1 THEN
+				LEAVE petlja;
+			END IF;
+			INSERT INTO racun_stavka VALUES
+            (r_id, p_id, p_kolicina);
+		END LOOP;
+	CLOSE cur;
+END //
+DELIMITER ;
