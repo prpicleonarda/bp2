@@ -65,7 +65,8 @@ CREATE TABLE proizvod (
     nabavna_cijena DECIMAL(10, 2) NOT NULL,
     prodajna_cijena DECIMAL(10, 2) NOT NULL,
     kategorija_id INT,
-    FOREIGN KEY (kategorija_id) REFERENCES kategorija(id)
+    FOREIGN KEY (kategorija_id) REFERENCES kategorija(id),
+    CONSTRAINT greska_ime_proizvoda UNIQUE (naziv)
 );
 
 CREATE TABLE predracun (
@@ -100,7 +101,7 @@ CREATE TABLE racun_stavka (
 	racun_id INT,
     proizvod_id INT,
     kolicina INT NOT NULL,
-	FOREIGN KEY (racun_id) REFERENCES racun(id),
+	FOREIGN KEY (racun_id) REFERENCES racun(id) ON DELETE CASCADE,
     FOREIGN KEY (proizvod_id) REFERENCES proizvod(id)
 );
 
@@ -365,8 +366,8 @@ INSERT INTO proizvod(naziv, nabavna_cijena, prodajna_cijena, kategorija_id) VALU
 INSERT INTO racun(kupac_id, zaposlenik_id, datum, nacin_placanja) VALUES
 (NULL, 1, NOW(), "POS"),
 (1, 2, NOW(), "POS"),
-(4, 10, NOW(), "POS"),
-(NULL, 5, NOW(), "gotovina");
+(4, 1, NOW(), "POS"),
+(1, 5, NOW(), "gotovina");
 
 INSERT INTO racun_stavka(racun_id, proizvod_id, kolicina) VALUES
 (1, 1, 1),
@@ -378,38 +379,86 @@ INSERT INTO racun_stavka(racun_id, proizvod_id, kolicina) VALUES
 (2, 70, 2),
 (3, 43, 1),
 (3, 46, 2),
-(3, 2, 1);
+(3, 2, 1),
+(4, 5, 1),
+(4, 13, 1);
+
+
+-- POGLEDI ZA DETALJNIJI PREGLED RACUNA
 
 CREATE OR REPLACE VIEW pregled_stavki_racuna AS
-	SELECT racun_id, p.naziv, p.prodajna_cijena AS cijena , rs.kolicina, (p.prodajna_cijena * kolicina) AS iznos
+	SELECT racun_id, p.naziv, p.prodajna_cijena AS cijena , rs.kolicina, (p.prodajna_cijena * kolicina) AS iznos, 
+		IF(k.tip = "poslovni", 25, kb.popust) AS popust,
+        IF(k.id IS NULL, p.prodajna_cijena * kolicina, ROUND(IF(k.tip = "poslovni", (prodajna_cijena * 3/4) * kolicina, (prodajna_cijena - prodajna_cijena * popust / 100) * kolicina), 2)) AS nakon_popusta
 		FROM racun_stavka AS rs
 		INNER JOIN racun AS r ON r.id = rs.racun_id
-		INNER JOIN proizvod AS p ON rs.proizvod_id = p.id;
+		INNER JOIN proizvod AS p ON rs.proizvod_id = p.id
+        LEFT JOIN kupac AS k ON r.kupac_id = k.id
+        LEFT JOIN klub AS kb ON k.klub_id = kb.id;
 
 CREATE OR REPLACE VIEW pregled_racuna AS
 	SELECT 	r.id AS racun_id,
 			CONCAT(k.ime, " ", k.prezime) AS kupac,
 			CONCAT(z.ime, " ", z.prezime) AS zaposlenik,
 			datum, nacin_placanja,
-			SUM(iznos) AS ukupan_iznos, IF(k.tip = "poslovni", 25, kb.popust) AS popust, 
-            ROUND(IF(k.tip = "poslovni", (SUM(iznos) * 3/4), (SUM(iznos) - SUM(iznos) * popust / 100)), 2) AS nakon_popusta
+            SUM(nakon_popusta) AS iznos
 		FROM racun AS r
 		LEFT JOIN kupac AS k ON r.kupac_id = k.id
 		LEFT JOIN zaposlenik AS z ON r.zaposlenik_id = z.id
 		LEFT JOIN pregled_stavki_racuna AS psr ON psr.racun_id = r.id
-        LEFT JOIN klub AS kb ON k.klub_id = kb.id
 		GROUP BY r.id;
-       
-       
+
+-- POGLED ZA KUPCE SA NAJVECIM BROJEM RACUNA
+
+CREATE OR REPLACE VIEW najcesci_kupci AS
+	SELECT CONCAT(ime, " ", prezime) AS kupac, COUNT(r.id) AS broj_racuna
+		FROM racun AS r
+		INNER JOIN kupac AS k ON r.kupac_id = k.id
+		GROUP BY kupac_id
+        ORDER BY broj_racuna DESC;
+        
+-- POGLED ZA KUPCA SA NAJVISE POTROSENOG NOVCA
+
+CREATE OR REPLACE VIEW najbolji_kupci AS
+	SELECT kupac_id, kupac, SUM(iznos) AS ukupan_iznos
+		FROM pregled_racuna AS pr
+		INNER JOIN racun AS r ON pr.racun_id = r.id
+		WHERE kupac_id IS NOT NULL
+		GROUP BY kupac_id, kupac
+		ORDER BY ukupan_iznos DESC;
+        
+-- POGLED ZA ZAPOSLENIKA SA NAJVISE IZDANIH RACUNA
+
+CREATE OR REPLACE VIEW najbolji_zaposlenik AS
+	SELECT CONCAT(ime, " ", prezime) AS zaposlenik, spol, COUNT(r.id) AS broj_racuna
+		FROM racun AS r
+		INNER JOIN zaposlenik AS z ON r.zaposlenik_id = z.id
+		GROUP BY z.id
+		ORDER BY broj_racuna DESC;
+    
+-- POGLED ZA NAJVISE PRODAVAN PROIZVOD
+
+CREATE OR REPLACE VIEW najprodavaniji_proizvodi AS
+	SELECT p.id, p.naziv, SUM(kolicina) AS kolicina
+		FROM racun_stavka AS rs
+		INNER JOIN proizvod AS p ON rs.proizvod_id = p.id
+		GROUP BY proizvod_id
+		ORDER BY kolicina DESC;
+        
+-- POGLED ZA PROIZVODE SA NAJVECIM PROFITOM
+
+CREATE OR REPLACE VIEW najbolja_zarada AS
+	SELECT p.id, p.naziv, SUM(nakon_popusta) AS zarada
+		FROM pregled_stavki_racuna AS psr
+		INNER JOIN proizvod AS p ON p.naziv = psr.naziv
+		GROUP BY p.id
+		ORDER BY zarada DESC;
+        
 -- PROCEDURA ZA STVARANJE RACUNA       
        
 DELIMITER //
 
-CREATE PROCEDURE stvori_racun(
-	IN k_id INT,
-    IN z_id INT,
-    IN nacin_placanja VARCHAR(50)
-)
+CREATE PROCEDURE stvori_racun(IN k_id INT, IN z_id INT, IN nacin_placanja VARCHAR(50))
 BEGIN
     INSERT INTO racun(kupac_id, zaposlenik_id, datum, nacin_placanja) VALUES 
     (k_id, z_id, NOW(), nacin_placanja);
@@ -439,5 +488,34 @@ BEGIN
             (r_id, p_id, p_kolicina);
 		END LOOP;
 	CLOSE cur;
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA BRISANJE RACUNA
+
+DELIMITER //
+CREATE PROCEDURE izbrisi_racun(IN racun_id INT)
+BEGIN
+	DELETE FROM racun WHERE id = racun_id;
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA DODAVANJE PROIZVODA       
+       
+DELIMITER //
+CREATE PROCEDURE dodaj_proizvod(IN naziv VARCHAR(100), IN n_cijena DECIMAL(10, 2), IN p_cijena DECIMAL(10,2), kategorija_id INT)
+BEGIN
+    INSERT INTO proizvod VALUES (naziv, n_cijena, p_cijena, kategorija_id);
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA DODAVANJE KUPCA
+
+DELIMITER //
+CREATE PROCEDURE dodaj_kupca(
+	IN ime VARCHAR(50), IN prezime VARCHAR(20), IN spol CHAR(1), adresa VARCHAR(100),
+    IN email VARCHAR(50), IN tip VARCHAR(50), IN oib_firme CHAR(11))
+BEGIN
+    INSERT INTO kupac VALUES (ime, prezime, spol, adresa, email, tip, oib_firme);
 END //
 DELIMITER ;
