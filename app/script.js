@@ -8,8 +8,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const dodajStavkeForm = document.getElementById('dodaj-stavke-form');
     const stavkeContainer = document.getElementById('stavke-container');
     const addStavkaButton = document.getElementById('add-stavka');
+    const dodajProizvodForm = document.getElementById('dodaj-proizvod-form');
+    const dodajKupcaForm = document.getElementById('dodaj-kupca-form');
+    const loginForm = document.getElementById('login-form');
+    const kupacView = document.getElementById('kupac-view');
+    const zaposlenikView = document.getElementById('zaposlenik-view');
+    const adminView = document.getElementById('admin-view');
+    const loginView = document.getElementById('login-view');
+    const loginButton = document.getElementById('login-button');
   
     let currentRacunId = null;
+  
+    // Show kupac view initially
+    kupacView.style.display = 'block';
   
     // Fetch and display data for routes
     buttons.forEach((button) => {
@@ -79,12 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
     noviRacunForm.addEventListener('submit', async (e) => {
         e.preventDefault();
       
-        // Get the values from the form
         let kupacId = document.getElementById('kupac-id').value;
         const zaposlenikId = document.getElementById('zaposlenik-id').value;
         const nacinPlacanja = document.getElementById('nacin-placanja').value;
       
-        // If Kupac ID is empty, set it to null
         if (kupacId === '') {
           kupacId = null;
         }
@@ -110,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
       
-  
     // Add items dynamically
     addStavkaButton.addEventListener('click', () => {
       const stavkaDiv = document.createElement('div');
@@ -155,9 +163,114 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   
+    // Handle Dodaj Proizvod form submission
+    dodajProizvodForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const naziv = document.getElementById('naziv').value;
+      const nabavnaCijena = document.getElementById('nabavna-cijena').value;
+      const prodajnaCijena = document.getElementById('prodajna-cijena').value;
+      const kategorijaId = document.getElementById('kategorija-id').value;
+  
+      try {
+        const response = await fetch('http://127.0.0.1:5000/dodaj_proizvod', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ naziv, nabavna_cijena: nabavnaCijena, prodajna_cijena: prodajnaCijena, kategorija_id: kategorijaId }),
+        });
+  
+        const data = await response.json();
+        if (data.success) {
+          alert('Proizvod uspješno dodan!');
+          dodajProizvodForm.reset();
+        } else {
+          alert(`Greška: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Greška pri dodavanju proizvoda.');
+      }
+    });
+  
+    // Handle Dodaj Kupca form submission
+    dodajKupcaForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const ime = document.getElementById('ime').value;
+      const prezime = document.getElementById('prezime').value;
+      const spol = document.getElementById('spol').value;
+      const adresa = document.getElementById('adresa').value;
+      const email = document.getElementById('email').value;
+      const tip = document.getElementById('tip').value;
+      const oibFirme = document.getElementById('oib-firme').value || null;
+  
+      try {
+        const response = await fetch('http://127.0.0.1:5000/dodaj_kupca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ime, prezime, spol, adresa, email, tip, oib_firme: oibFirme }),
+        });
+  
+        const data = await response.json();
+        if (data.success) {
+          alert('Kupac uspješno dodan!');
+          dodajKupcaForm.reset();
+        } else {
+          alert(`Greška: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Greška pri dodavanju kupca.');
+      }
+    });
+  
     // Close popup
     closePopup.addEventListener('click', () => {
       popup.style.display = 'none';
     });
+  
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userId = document.getElementById('user-id').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, password }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                loginView.style.display = 'none';
+                loginButton.textContent = 'Logout';
+                loginButton.onclick = logout;
+                if (data.role === 'admin') {
+                    adminView.style.display = 'block';
+                } else if (data.role === 'zaposlenik') {
+                    zaposlenikView.style.display = 'block';
+                }
+            } else {
+                alert('Invalid credentials');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error during login');
+        }
+    });
+
+    function logout() {
+        loginButton.textContent = 'Login';
+        loginButton.onclick = showLogin;
+        adminView.style.display = 'none';
+        zaposlenikView.style.display = 'none';
+        kupacView.style.display = 'block';
+    }
   });
+  
+  function showLogin() {
+    document.getElementById('kupac-view').style.display = 'none';
+    document.getElementById('login-view').style.display = 'block';
+  }
   
