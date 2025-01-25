@@ -120,8 +120,9 @@ CREATE TABLE stavka (
     narudzba_id INT DEFAULT NULL,
     proizvod_id INT NOT NULL,
     proizvod_naziv VARCHAR(100),
-    kolicina INT NOT NULL,
     cijena DECIMAL(10, 2) NOT NULL,
+    kolicina INT NOT NULL,
+    ukupan_iznos DECIMAL(10, 2) NOT NULL,
     popust DECIMAL(10, 2) DEFAULT NULL,
     nakon_popusta DECIMAL(10, 2) DEFAULT NULL,
     CONSTRAINT kolicina_provjera CHECK (kolicina > 0),
@@ -148,22 +149,22 @@ CREATE TABLE evidencija(
 -- POGLEDI ZA STAVKE ODREĐENOG TIPA (korisno za dalje procedure)
 
 CREATE OR REPLACE VIEW predracun_stavke AS
-	SELECT predracun_id, proizvod_id, proizvod_naziv, kolicina, cijena, popust, nakon_popusta
+	SELECT predracun_id, proizvod_id, proizvod_naziv, cijena, kolicina, ukupan_iznos, popust, nakon_popusta
 		FROM stavka
         WHERE predracun_id IS NOT NULL;
 
 CREATE OR REPLACE VIEW racun_stavke AS
-	SELECT racun_id, proizvod_id, proizvod_naziv, kolicina, cijena, popust, nakon_popusta
+	SELECT racun_id, proizvod_id, proizvod_naziv, cijena, kolicina, ukupan_iznos, popust, nakon_popusta
 		FROM stavka
         WHERE racun_id IS NOT NULL;
 
 CREATE OR REPLACE VIEW nabava_stavke AS
-	SELECT nabava_id, proizvod_id, proizvod_naziv, kolicina, cijena, popust, nakon_popusta 
+	SELECT nabava_id, proizvod_id, proizvod_naziv, cijena, kolicina, ukupan_iznos, popust, nakon_popusta 
 		FROM stavka
         WHERE nabava_id IS NOT NULL;
 
 CREATE OR REPLACE VIEW narudzba_stavke AS
-	SELECT narudzba_id, proizvod_id, proizvod_naziv, kolicina, cijena, popust, nakon_popusta 
+	SELECT narudzba_id, proizvod_id, proizvod_naziv, cijena, kolicina, ukupan_iznos, popust, nakon_popusta 
 		FROM stavka
         WHERE narudzba_id IS NOT NULL;
 
@@ -415,9 +416,11 @@ BEGIN
     SET NEW.proizvod_naziv = (SELECT naziv FROM proizvod WHERE id = NEW.proizvod_id);
     
     IF NEW.nabava_id IS NOT NULL THEN
-		SET NEW.cijena = (SELECT nabavna_cijena FROM proizvod WHERE id = NEW.proizvod_id) * NEW.kolicina;
+		SET NEW.cijena = (SELECT nabavna_cijena FROM proizvod WHERE id = NEW.proizvod_id);
+        SET NEW.ukupan_iznos = NEW.cijena * NEW.kolicina;
     ELSE
-		SET NEW.cijena = (SELECT prodajna_cijena FROM proizvod WHERE id = NEW.proizvod_id) * NEW.kolicina;
+		SET NEW.cijena = (SELECT prodajna_cijena FROM proizvod WHERE id = NEW.proizvod_id);
+        SET NEW.ukupan_iznos = NEW.cijena * NEW.kolicina;
         
         IF (NEW.predracun_id IS NOT NULL) THEN
 			SET ku_id = (SELECT kupac_id FROM predracun WHERE id = NEW.predracun_id); 
@@ -444,7 +447,7 @@ BEGIN
 		SET NEW.popust = 25;
     END IF;
     
-    SET NEW.nakon_popusta = IF(NEW.popust IS NULL, NEW.cijena, NEW.cijena * (1 - NEW.popust/100));
+    SET NEW.nakon_popusta = IF(NEW.popust IS NULL, NEW.ukupan_iznos, NEW.ukupan_iznos * (1 - NEW.popust/100));
 END //
 
 DELIMITER ;
@@ -795,3 +798,5 @@ INSERT INTO stavka(narudzba_id, proizvod_id, kolicina) VALUES
 (2, 59, 1);
 
 -- TESTIRANJE
+
+SELECT * FROM stavka;
