@@ -146,6 +146,14 @@ CREATE TABLE evidencija(
     vrijeme DATETIME DEFAULT NOW()
 );
 
+-- POGLED ZA PROIZVODE I NJIHOVI ODJELI
+CREATE OR REPLACE VIEW pregled_proizvoda AS
+    SELECT p.*, o.naziv AS odjel_naziv
+    FROM proizvod p
+    LEFT JOIN kategorija k ON p.kategorija_id = k.id 
+    LEFT JOIN odjel o ON k.odjel_id = o.id;
+
+
 -- POGLEDI ZA STAVKE ODREĐENOG TIPA (korisno za dalje procedure)
 
 CREATE OR REPLACE VIEW predracun_stavke AS
