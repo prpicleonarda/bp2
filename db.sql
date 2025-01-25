@@ -469,26 +469,28 @@ DELIMITER ;
 -- PROCEDURA ZA POPUNJAVANJE RACUNA
 
 DELIMITER //
-CREATE PROCEDURE dodaj_stavke(IN r_id INT)
+
+CREATE PROCEDURE dodaj_stavke(IN stavke_json JSON)
 BEGIN
-	DECLARE p_id, p_kolicina INTEGER;
-	DECLARE finished INTEGER DEFAULT 0;
-	DECLARE cur CURSOR FOR
-		SELECT proizvod_id, kolicina
-			FROM temp_t;
-			
-	DECLARE EXIT HANDLER FOR NOT FOUND SET finished = 1;
-	OPEN cur;
-		petlja: LOOP
-		FETCH cur INTO p_id, p_kolicina;
-			IF finished=1 THEN
-				LEAVE petlja;
-			END IF;
-			INSERT INTO racun_stavka VALUES
-            (r_id, p_id, p_kolicina);
-		END LOOP;
-	CLOSE cur;
+    DECLARE i INT DEFAULT 0;
+    DECLARE stavke_count INT;
+    DECLARE r_id INT;
+    DECLARE p_id INT;
+    DECLARE p_kolicina INT;
+
+    SET stavke_count = JSON_LENGTH(stavke_json);
+
+    WHILE i < stavke_count DO
+        SET r_id = CAST(JSON_UNQUOTE(JSON_EXTRACT(stavke_json, CONCAT('$[', i, '].racun_id'))) AS UNSIGNED);
+        SET p_id = CAST(JSON_UNQUOTE(JSON_EXTRACT(stavke_json, CONCAT('$[', i, '].proizvod_id'))) AS UNSIGNED);
+        SET p_kolicina = CAST(JSON_UNQUOTE(JSON_EXTRACT(stavke_json, CONCAT('$[', i, '].kolicina'))) AS UNSIGNED);
+
+        INSERT INTO racun_stavka (racun_id, proizvod_id, kolicina) VALUES (r_id, p_id, p_kolicina);
+
+        SET i = i + 1;
+    END WHILE;
 END //
+
 DELIMITER ;
 
 -- PROCEDURA ZA BRISANJE RACUNA
