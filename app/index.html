@@ -17,12 +17,37 @@
         border-radius: 10px;
       }
 
+      header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+      }
+
       h1 {
-        text-align: center;
-        color: #222;
-        margin-top: 20px;
-        margin-bottom: 20px;
-        border-radius: 10px;
+        margin: 0;
+        flex-grow: 1;
+      }
+
+      .login-button {
+        background-color: #fff;
+        color: #4caf50;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        width: 100px;
+        margin-right: 10px;
+        margin-top: 10px;
+        transition: background-color 0.3s ease;
+      }
+
+      .login-button:hover {
+        background-color: #e0e0e0;
       }
 
       .button-container {
@@ -153,13 +178,12 @@
       }
 
       .stavka input {
-        width: calc(50% - 5px); /* Adjust width of inputs */
+        width: calc(50% - 5px);
       }
 
-      /* Ensure that the product ID and quantity are on the same row on wider screens */
       @media (min-width: 768px) {
         .stavka input {
-          width: calc(45% - 5px); /* Give more space to inputs */
+          width: calc(45% - 5px);
         }
       }
 
@@ -169,15 +193,20 @@
     </style>
   </head>
   <body>
-    <h1>Trgovina "Zadnji dani"</h1>
-    <div class="button-container">
-      <button class="data-fetch-button" id="klub">Fetch Klub Data</button>
-      <button class="data-fetch-button" id="lokacija">Fetch Locations Data</button>
-      <button class="data-fetch-button" id="pregled_stavki_racuna">Fetch Products of Receipt Data</button>
-      <button class="data-fetch-button" id="pregled_racuna">Fetch Račun Data</button>
-    </div>
+    <header>
+      <h1>Trgovina "DANI NAKON"</h1>
+      <button class="login-button" id="login-button" onclick="showLogin()">Login</button>
+    </header>
+    <div id="kupac-view" class="view">
+      <h2>Kupac View</h2>
+      <div class="button-container">
+        <button class="data-fetch-button" id="klub">Fetch Klub Data</button>
+        <button class="data-fetch-button" id="lokacija">Fetch Locations Data</button>
+        <button class="data-fetch-button" id="pregled_stavki_racuna">Fetch Products of Receipt Data</button>
+        <button class="data-fetch-button" id="pregled_racuna">Fetch Račun Data</button>
+      </div>
 
-    <div class="form-container" id="novi-racun-container">
+      <div class="form-container" id="novi-racun-container">
         <h2>Kreiraj Novi Račun</h2>
         <form id="novi-racun-form">
           <label for="kupac-id">Kupac ID:</label>
@@ -194,29 +223,106 @@
   
           <button type="submit">Kreiraj Račun</button>
         </form>
+      </div>
+
+      <div id="table-container" class="table-container"></div>
+
+      <div style="height: 50px;"></div>
+
+      <div id="popup">
+        <h2>Dodaj Stavke</h2>
+        <form id="dodaj-stavke-form">
+          <div id="stavke-container">
+            <div class="stavka">
+              <label>Proizvod ID:</label>
+              <input type="number" class="proizvod-id" required min="1" />
+              <label>Količina:</label>
+              <input type="number" class="kolicina" required min="1" />
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button type="button" id="add-stavka">Dodaj Još</button>
+            <button type="submit">Pošalji Stavke</button>
+          </div>
+        </form>
+        <button class="close-popup" id="close-popup">Zatvori</button>
+      </div>
+
+      <div class="form-container" id="dodaj-proizvod-container">
+        <h2>Dodaj Proizvod</h2>
+        <form id="dodaj-proizvod-form">
+          <label for="naziv">Naziv:</label>
+          <input type="text" id="naziv" required />
+  
+          <label for="nabavna-cijena">Nabavna Cijena:</label>
+          <input type="number" id="nabavna-cijena" required min="0" step="0.01" />
+  
+          <label for="prodajna-cijena">Prodajna Cijena:</label>
+          <input type="number" id="prodajna-cijena" required min="0" step="0.01" />
+  
+          <label for="kategorija-id">Kategorija ID:</label>
+          <input type="number" id="kategorija-id" required min="1" />
+  
+          <button type="submit">Dodaj Proizvod</button>
+        </form>
+      </div>
+
+      <div class="form-container" id="dodaj-kupca-container">
+        <h2>Dodaj Kupca</h2>
+        <form id="dodaj-kupca-form">
+          <label for="ime">Ime:</label>
+          <input type="text" id="ime" required />
+  
+          <label for="prezime">Prezime:</label>
+          <input type="text" id="prezime" required />
+  
+          <label for="spol">Spol:</label>
+          <select id="spol" required>
+            <option value="M">M</option>
+            <option value="Ž">Ž</option>
+          </select>
+  
+          <label for="adresa">Adresa:</label>
+          <input type="text" id="adresa" required />
+  
+          <label for="email">Email:</label>
+          <input type="email" id="email" required />
+  
+          <label for="tip">Tip:</label>
+          <select id="tip" required>
+            <option value="privatni">Privatni</option>
+            <option value="poslovni">Poslovni</option>
+          </select>
+  
+          <label for="oib-firme">OIB Firme (optional):</label>
+          <input type="text" id="oib-firme" />
+  
+          <button type="submit">Dodaj Kupca</button>
+        </form>
+      </div>
     </div>
 
-    <div id="table-container" class="table-container"></div>
-
-    <div style="height: 50px;"></div>
-
-    <div id="popup">
-      <h2>Dodaj Stavke</h2>
-      <form id="dodaj-stavke-form">
-        <div id="stavke-container">
-          <div class="stavka">
-            <label>Proizvod ID:</label>
-            <input type="number" class="proizvod-id" required min="1" />
-            <label>Količina:</label>
-            <input type="number" class="kolicina" required min="1" />
-          </div>
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-          <button type="button" id="add-stavka">Dodaj Još</button>
-          <button type="submit">Pošalji Stavke</button>
-        </div>
+    <div id="login-view" class="view" style="display: none;">
+      <h2>Login</h2>
+      <form id="login-form">
+        <label for="user-id">User ID:</label>
+        <input type="text" id="user-id" required />
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" required />
+        
+        <button type="submit">Login</button>
       </form>
-      <button class="close-popup" id="close-popup">Zatvori</button>
+    </div>
+
+    <div id="zaposlenik-view" class="view" style="display: none;">
+      <h2>Zaposlenik View</h2>
+      <!-- zaposlenik specific content... -->
+    </div>
+
+    <div id="admin-view" class="view" style="display: none;">
+      <h2>Admin View</h2>
+      <!-- admin specific content... -->
     </div>
 
     <script src="script.js"></script>
