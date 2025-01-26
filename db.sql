@@ -148,7 +148,7 @@ CREATE TABLE evidencija(
 
 -- POGLED ZA PROIZVODE I NJIHOVI ODJELI
 CREATE OR REPLACE VIEW pregled_proizvoda AS
-    SELECT p.*, o.naziv AS odjel_naziv
+    SELECT p.*, k.naziv AS kategorija_naziv, o.naziv AS odjel_naziv
     FROM proizvod p
     LEFT JOIN kategorija k ON p.kategorija_id = k.id 
     LEFT JOIN odjel o ON k.odjel_id = o.id;

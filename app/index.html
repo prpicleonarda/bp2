@@ -14,7 +14,6 @@
         align-items: center;
         min-height: 100vh;
         background-color: #f1f1f1;
-        border-radius: 10px;
       }
 
       header {
@@ -22,32 +21,85 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 20px;
+        padding: 15px 30px;
         background-color: #4caf50;
         color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       h1 {
         margin: 0;
         flex-grow: 1;
+        font-size: 24px;
       }
 
       .login-button {
         background-color: #fff;
         color: #4caf50;
         border: none;
-        padding: 5px 10px;
+        padding: 8px 15px;
         border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
-        width: 100px;
-        margin-right: 10px;
-        margin-top: 10px;
         transition: background-color 0.3s ease;
       }
 
       .login-button:hover {
         background-color: #e0e0e0;
+      }
+
+      .content-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        width: 80%;
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        background-color: #fff;
+        border-radius: 10px;
+        gap: 20px;
+      }
+
+      .left-panel,
+      .center-panel {
+        background-color: #f9f9f9;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+      }
+
+      .grid-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .product-box {
+        background-color: #fff;
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        text-align: center;
+        transition: transform 0.3s ease;
+      }
+
+      .product-box:hover {
+        transform: translateY(-5px);
+      }
+
+      .clickable {
+        cursor: pointer;
+        color: #007bff;
+        text-decoration: underline;
+      }
+
+      .clickable:hover {
+        color: #0056b3;
+      }
+
+      .sort-container {
+        margin-bottom: 20px;
       }
 
       .button-container {
@@ -199,6 +251,30 @@
     </header>
     <div id="kupac-view" class="view">
       <h2>Kupac View</h2>
+      <div class="content-container">
+        <div class="left-panel">
+          <h3>Odjeli i Kategorije</h3>
+          <ul id="odjeli-kategorije-list">
+            <!-- Odjeli and Kategorije will be dynamically populated here -->
+          </ul>
+        </div>
+        <div class="center-panel">
+          <h3>Proizvodi</h3>
+          <div class="sort-container">
+            <label for="sort-by">Sort By:</label>
+            <select id="sort-by">
+              <option value="asc">Price: Low to High</option>
+              <option value="desc">Price: High to Low</option>
+            </select>
+          </div>
+          <div id="proizvodi-grid" class="grid-container">
+            <!-- Proizvodi will be dynamically populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="restricted-view" class="view" style="display: none;">
       <div class="button-container">
         <button class="data-fetch-button" id="klub">Fetch Klub Data</button>
         <button class="data-fetch-button" id="lokacija">Fetch Locations Data</button>

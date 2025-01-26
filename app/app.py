@@ -156,5 +156,37 @@ def login():
     else:
         return jsonify({'success': False, 'error': 'Invalid credentials'})
 
+@app.route('/odjeli_kategorije_proizvodi', methods=['GET'])
+def get_odjeli_kategorije_proizvodi():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM pregled_proizvoda')
+        data = cur.fetchall()
+        cur.close()
+
+        odjeli_kategorije_map = {}
+        proizvodi = []
+
+        for row in data:
+            odjel = row['odjel_naziv']
+            kategorija = row['kategorija_naziv']
+            if odjel not in odjeli_kategorije_map:
+                odjeli_kategorije_map[odjel] = set()
+            odjeli_kategorije_map[odjel].add(kategorija)
+
+            proizvodi.append({
+                'naziv': row['naziv'],
+                'nabavna_cijena': row['nabavna_cijena'],
+                'prodajna_cijena': row['prodajna_cijena'],
+                'kategorija': kategorija,
+                'odjel': odjel
+            })
+
+        odjeli_kategorije = [{'odjel': odjel, 'kategorije': list(kategorije)} for odjel, kategorije in odjeli_kategorije_map.items()]
+
+        return jsonify({'odjeliKategorije': odjeli_kategorije, 'proizvodi': proizvodi})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True)

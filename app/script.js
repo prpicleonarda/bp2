@@ -16,8 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminView = document.getElementById('admin-view');
     const loginView = document.getElementById('login-view');
     const loginButton = document.getElementById('login-button');
+    const sortBySelect = document.getElementById('sort-by');
   
     let currentRacunId = null;
+    let proizvodi = [];
   
     // Show kupac view initially
     kupacView.style.display = 'block';
@@ -246,6 +248,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginView.style.display = 'none';
                 loginButton.textContent = 'Logout';
                 loginButton.onclick = logout;
+                if (data.role === 'admin' || data.role === 'zaposlenik') {
+                    document.getElementById('restricted-view').style.display = 'block';
+                }
                 if (data.role === 'admin') {
                     adminView.style.display = 'block';
                 } else if (data.role === 'zaposlenik') {
@@ -265,8 +270,87 @@ document.addEventListener('DOMContentLoaded', () => {
         loginButton.onclick = showLogin;
         adminView.style.display = 'none';
         zaposlenikView.style.display = 'none';
+        document.getElementById('restricted-view').style.display = 'none';
         kupacView.style.display = 'block';
     }
+
+    // Fetch and display odjeli, kategorije, and proizvodi
+    async function fetchAndDisplayOdjeliKategorijeProizvodi() {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/odjeli_kategorije_proizvodi');
+        if (!response.ok) {
+          throw new Error('Failed to fetch odjeli, kategorije, and proizvodi');
+        }
+
+        const data = await response.json();
+        proizvodi = data.proizvodi;
+        renderOdjeliKategorije(data.odjeliKategorije);
+        renderProizvodi(proizvodi);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function renderOdjeliKategorije(odjeliKategorije) {
+      const list = document.getElementById('odjeli-kategorije-list');
+      list.innerHTML = '';
+      odjeliKategorije.forEach((item) => {
+        const odjelLi = document.createElement('li');
+        odjelLi.textContent = item.odjel;
+        odjelLi.classList.add('clickable');
+        odjelLi.addEventListener('click', () => filterProizvodi('odjel', item.odjel));
+        list.appendChild(odjelLi);
+
+        const kategorijaUl = document.createElement('ul');
+        item.kategorije.forEach((kategorija) => {
+          const kategorijaLi = document.createElement('li');
+          kategorijaLi.textContent = kategorija;
+          kategorijaLi.classList.add('clickable');
+          kategorijaLi.addEventListener('click', () => filterProizvodi('kategorija', kategorija));
+          kategorijaUl.appendChild(kategorijaLi);
+        });
+        list.appendChild(kategorijaUl);
+      });
+    }
+
+    function filterProizvodi(type, value) {
+      const filteredProizvodi = proizvodi.filter((proizvod) => proizvod[type] === value);
+      renderProizvodi(filteredProizvodi);
+    }
+
+    function renderProizvodi(proizvodiData) {
+      const grid = document.getElementById('proizvodi-grid');
+      grid.innerHTML = '';
+      proizvodiData.forEach((proizvod) => {
+        const div = document.createElement('div');
+        div.classList.add('product-box');
+        div.innerHTML = `
+          <h4>${proizvod.naziv}</h4>
+          <p>Nabavna Cijena: ${proizvod.nabavna_cijena}</p>
+          <p>Prodajna Cijena: ${proizvod.prodajna_cijena}</p>
+          <p>Kategorija: ${proizvod.kategorija}</p>
+          <p>Odjel: ${proizvod.odjel}</p>
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    sortBySelect.addEventListener('change', () => {
+      const sortOrder = sortBySelect.value;
+      sortProizvodi(sortOrder);
+    });
+
+    function sortProizvodi(order) {
+      const sortedProizvodi = [...proizvodi].sort((a, b) => {
+        const priceA = parseFloat(a.prodajna_cijena);
+        const priceB = parseFloat(b.prodajna_cijena);
+        return order === 'asc' ? priceA - priceB : priceB - priceA;
+      });
+      renderProizvodi(sortedProizvodi);
+    }
+
+    // Call the function to fetch and display data
+    fetchAndDisplayOdjeliKategorijeProizvodi();
   });
   
   function showLogin() {
