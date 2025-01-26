@@ -95,14 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
   
     async function fetchRacunDetalji(racunId) {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/racun_detalji/${racunId}`);
+        const response = await fetch(`http://127.0.0.1:5000/racun_detalji_full/${racunId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch racun details');
         }
   
         const data = await response.json();
         if (data.success) {
-          renderStavkePopup(data.stavke);
+          renderReceiptPopup(data.racun);
         } else {
           alert(`Error: ${data.error}`);
         }
@@ -112,14 +112,48 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   
-    function renderStavkePopup(stavke) {
-      const stavkeList = stavke.map(stavka => `
-        <li>${stavka.proizvod_naziv} - Količina: ${stavka.kolicina}</li>
+    function renderReceiptPopup(racunDetails) {
+      if (!racunDetails.length) {
+        alert('No details available for this racun.');
+        return;
+      }
+  
+      const racunInfo = racunDetails[0]; // Assuming the first entry contains general racun info
+      const stavkeList = racunDetails.map(stavka => `
+        <tr>
+          <td>${stavka.proizvod_naziv || '-'}</td>
+          <td>${stavka.kolicina || '-'}</td>
+          <td>${stavka.cijena || '-'}</td>
+          <td>${stavka.popust || '-'}</td>
+          <td>${stavka.nakon_popusta || '-'}</td>
+        </tr>
       `).join('');
   
       const popupContent = `
-        <h2>Stavke Računa</h2>
-        <ul>${stavkeList}</ul>
+        <h2>Račun ID: ${racunInfo.racun_id}</h2>
+        <p>Datum: ${new Date(racunInfo.datum).toLocaleString()}</p>
+        <p>Kupac: ${racunInfo.kupac_ime}</p>
+        <p>Zaposlenik: ${racunInfo.zaposlenik_ime}</p>
+        <table class="receipt-table">
+          <thead>
+            <tr>
+              <th>Proizvod</th>
+              <th>Količina</th>
+              <th>Cijena</th>
+              <th>Popust</th>
+              <th>Nakon Popusta</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stavkeList}
+          </tbody>
+        </table>
+        <table class="total-table" style="margin-top: 10px;">
+          <tr>
+            <td><strong>Ukupno:</strong></td>
+            <td>${racunInfo.ukupan_iznos || '-'}</td>
+          </tr>
+        </table>
         <button class="close-popup" id="close-popup">Zatvori</button>
       `;
   

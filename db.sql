@@ -199,6 +199,31 @@ BEGIN
 END //
 DELIMITER ;
 
+DELIMITER //
+CREATE PROCEDURE racun_detalji_full(IN r_id INT)
+BEGIN
+    SELECT 
+        r.id AS racun_id,
+        r.datum,
+        r.nacin_placanja,
+        r.status,
+        CONCAT(z.ime, ' ', z.prezime) AS zaposlenik_ime,
+        IFNULL(CONCAT(k.ime, ' ', k.prezime), 'N/A') AS kupac_ime,
+        s.proizvod_naziv,
+        s.kolicina,
+        s.cijena,
+        s.popust,
+        s.nakon_popusta,
+        (SELECT SUM(s2.nakon_popusta) FROM stavka s2 WHERE s2.racun_id = r.id) AS ukupan_iznos
+    FROM racun r
+    INNER JOIN zaposlenik z ON r.zaposlenik_id = z.id 
+    LEFT JOIN kupac k ON r.kupac_id = k.id
+    LEFT JOIN stavka s ON s.racun_id = r.id
+    WHERE r.id = r_id;
+END //
+DELIMITER ;
+
+
 -- POGLED ZA KUPCE SA NAJVECIM BROJEM RACUNA
 
 CREATE OR REPLACE VIEW najcesci_kupci AS

@@ -251,6 +251,43 @@
       .form-container input[type="text"] {
         width: 100%;
       }
+
+      .receipt-table, .total-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+
+      .receipt-table th, .receipt-table td, .total-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .receipt-table th {
+        background-color: #4caf50;
+        color: white;
+      }
+
+      .receipt-table td {
+        background-color: white;
+        color: black;
+      }
+
+      .receipt-table tr:nth-child(even) td {
+        background-color: #f9f9f9;
+      }
+
+      .receipt-table tr:hover td {
+        background-color: #ddd;
+      }
+
+      .total-table td {
+        border: none;
+        font-weight: bold;
+        background-color: white;
+        color: black;
+      }
     </style>
   </head>
   <body>

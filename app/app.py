@@ -199,5 +199,16 @@ def racun_detalji(racun_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/racun_detalji_full/<int:racun_id>', methods=['GET'])
+def racun_detalji_full(racun_id):
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('racun_detalji_full', [racun_id])
+        data = cur.fetchall()
+        cur.close()
+        return jsonify({'success': True, 'racun': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True)
