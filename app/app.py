@@ -188,5 +188,16 @@ def get_odjeli_kategorije_proizvodi():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/racun_detalji/<int:racun_id>', methods=['GET'])
+def racun_detalji(racun_id):
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('racun_detalji', [racun_id])
+        data = cur.fetchall()
+        cur.close()
+        return jsonify({'success': True, 'stavke': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True)

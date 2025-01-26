@@ -47,14 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
   
         const data = await response.json();
-        renderTable(data);
+        renderTable(data, route);
       } catch (error) {
         console.error(error);
         tableContainer.innerHTML = `<p>Error loading data: ${error.message}</p>`;
       }
     }
   
-    function renderTable(data) {
+    function renderTable(data, route) {
       if (!data.length) {
         tableContainer.innerHTML = `<p>No data available for this table.</p>`;
         return;
@@ -80,12 +80,55 @@ document.addEventListener('DOMContentLoaded', () => {
           td.textContent = value;
           tr.appendChild(td);
         });
+  
+        if (route === 'pregled_racuna') {
+          tr.addEventListener('click', () => fetchRacunDetalji(row.racun_id || row.id));
+        }
+  
         tbody.appendChild(tr);
       });
   
       table.appendChild(tbody);
       tableContainer.innerHTML = '';
       tableContainer.appendChild(table);
+    }
+  
+    async function fetchRacunDetalji(racunId) {
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/racun_detalji/${racunId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch racun details');
+        }
+  
+        const data = await response.json();
+        if (data.success) {
+          renderStavkePopup(data.stavke);
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Error fetching racun details.');
+      }
+    }
+  
+    function renderStavkePopup(stavke) {
+      const stavkeList = stavke.map(stavka => `
+        <li>${stavka.proizvod_naziv} - Količina: ${stavka.kolicina}</li>
+      `).join('');
+  
+      const popupContent = `
+        <h2>Stavke Računa</h2>
+        <ul>${stavkeList}</ul>
+        <button class="close-popup" id="close-popup">Zatvori</button>
+      `;
+  
+      popup.innerHTML = popupContent;
+      popup.style.display = 'flex';
+  
+      document.getElementById('close-popup').addEventListener('click', () => {
+        popup.style.display = 'none';
+      });
     }
   
     // Handle Novi Račun form submission
@@ -325,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.classList.add('product-box');
         div.innerHTML = `
+          <img src="assets/pic.jpg" alt="${proizvod.naziv}" />
           <h4>${proizvod.naziv}</h4>
           <p>Nabavna Cijena: ${proizvod.nabavna_cijena}</p>
           <p>Prodajna Cijena: ${proizvod.prodajna_cijena}</p>
