@@ -421,7 +421,6 @@ CREATE PROCEDURE dodaj_kupca(
 BEGIN
     INSERT INTO kupac (ime, prezime, spol, adresa, email, tip, oib_firme) 
     VALUES (ime, prezime, spol, adresa, email, tip, oib_firme);
-    
     CALL stvori_zapis(CONCAT("Dodan kupac ", ime, " ", prezime, " ID(", LAST_INSERT_ID() ,")"));
 END //
 DELIMITER ;
@@ -432,14 +431,13 @@ DELIMITER //
 CREATE PROCEDURE dodaj_zaposlenika(
     IN ime VARCHAR(50), 
     IN prezime VARCHAR(50), 
-    IN pozicija VARCHAR(50), 
-    IN adresa VARCHAR(100), 
-    IN email VARCHAR(50), 
-    IN telefon VARCHAR(15)
+    IN mjesto_rada INT, 
+    IN placa DECIMAL(10, 2), 
+    IN spol CHAR(1)
 )
 BEGIN
-    INSERT INTO zaposlenik (ime, prezime, pozicija, adresa, email, telefon) 
-    VALUES (ime, prezime, pozicija, adresa, email, telefon);
+    INSERT INTO zaposlenik (ime, prezime, mjesto_rada, placa, spol) 
+    VALUES (ime, prezime, mjesto_rada, placa, spol);
     
     CALL stvori_zapis(CONCAT("Dodan zaposlenik ", ime, " ", prezime, " ID(", LAST_INSERT_ID(), ")"));
 END //

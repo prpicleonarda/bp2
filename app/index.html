@@ -143,6 +143,7 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         border-radius: 10px;
         margin-top: 20px;
+        margin: 0 auto;
       }
 
       .form-container.active {
@@ -154,6 +155,7 @@
         margin-bottom: 5px;
         display: block;
       }
+      
 
       input,
       select,
@@ -163,6 +165,7 @@
         margin-bottom: 15px;
         border: 1px solid #ddd;
         border-radius: 10px;
+        box-sizing: border-box;
       }
 
       button {
@@ -198,7 +201,7 @@
       }
 
       .table-container {
-        width: 90%;
+        width: 100%;
         max-width: 1000px;
         margin-top: 20px;
         overflow-x: auto;
@@ -358,12 +361,12 @@
       <h2>Admin View</h2>
       <div id="restricted-view" class="view" style="display: none;">
         <div class="button-container">
-          <button class="data-fetch-button" id="klub">Fetch Klub Data</button>
-          <button class="data-fetch-button" id="kupaci">Fetch Kupac Data</button>
-          <button class="data-fetch-button" id="zaposlenici">Fetch Zaposlenici Data</button>
-          <button class="data-fetch-button" id="lokacija">Fetch Locations Data</button>
-          <button class="data-fetch-button" id="pregled_stavki_racuna">Fetch Products of Receipt Data</button>
-          <button class="data-fetch-button" id="pregled_racuna">Fetch Račun Data</button>
+          <button class="data-fetch-button" id="klub">Klub</button>
+          <button class="data-fetch-button" id="kupaci">Kupci</button>
+          <button class="data-fetch-button" id="zaposlenici">Zaposlenici</button>
+          <button class="data-fetch-button" id="lokacija">Lokacije</button>
+          <button class="data-fetch-button" id="pregled_proizvoda">Proizvodi</button>
+          <button class="data-fetch-button" id="pregled_racuna">Računi</button>
           <button class="data-fetch-button" id="evidencija">Evidencija</button>
         </div>
         <div class="data-container">
@@ -492,17 +495,17 @@
                 <label for="prezime-zaposlenika">Prezime:</label>
                 <input type="text" id="prezime-zaposlenika" required />
 
-                <label for="pozicija">Pozicija:</label>
-                <input type="text" id="pozicija" required />
+                <label for="mjesto_rada">ID mjesta rada:</label>
+                <input type="text" id="mjesto_rada" required />
 
-                <label for="adresa-zaposlenika">Adresa:</label>
-                <input type="text" id="adresa-zaposlenika" required />
+                <label for="placa">Placa:</label>
+                <input type="number" id="placa" required />
 
-                <label for="email-zaposlenika">Email:</label>
-                <input type="email" id="email-zaposlenika" required />
-
-                <label for="telefon">Telefon:</label>
-                <input type="text" id="telefon" required />
+                <label for="spol">Spol:</label>
+                <select id="spol" required>
+                    <option value="M">M</option>
+                    <option value="Ž">Ž</option>
+                </select>
 
                 <button type="submit">Dodaj Zaposlenika</button>
             </form>

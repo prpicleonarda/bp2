@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Hide the add kupac form and data containers when other buttons are clicked
-    const otherButtons = ['klub', 'lokacija', 'pregled_stavki_racuna', 'pregled_racuna'];
+    const otherButtons = ['klub', 'lokacija', 'pregled_proizvoda', 'pregled_racuna'];
     otherButtons.forEach(buttonId => {
         document.getElementById(buttonId).addEventListener('click', () => {
             document.getElementById('dodaj-kupca-container').style.display = 'none';
@@ -704,10 +704,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ime = document.getElementById('ime-zaposlenika').value;
         const prezime = document.getElementById('prezime-zaposlenika').value;
-        const pozicija = document.getElementById('pozicija').value;
-        const adresa = document.getElementById('adresa-zaposlenika').value;
-        const email = document.getElementById('email-zaposlenika').value;
-        const telefon = document.getElementById('telefon').value;
+        const mjesto_rada = document.getElementById('mjesto_rada').value;
+        const placa = document.getElementById('placa').value;
+        const spol = document.getElementById('spol').value;
 
         // Disable the submit button to prevent multiple submissions
         const submitButton = document.querySelector('#dodaj-zaposlenika-form button[type="submit"]');
@@ -717,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('http://127.0.0.1:5000/dodaj_zaposlenika', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ime, prezime, pozicija, adresa, email, telefon }),
+                body: JSON.stringify({ ime, prezime, mjesto_rada, placa, spol }),
             });
 
             const data = await response.json();

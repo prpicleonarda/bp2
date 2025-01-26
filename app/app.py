@@ -40,14 +40,6 @@ def get_lokacija():
     cur.close()
     return jsonify(data)
 
-@app.route('/pregled_stavki_racuna', methods=['GET'])
-def get_pregled_stavki_racuna():
-    cur = mysql.connection.cursor()
-    cur.execute(''' SELECT * FROM pregled_stavki_racuna ''')
-    data = cur.fetchall()
-    cur.close()
-    return jsonify(data)
-
 @app.route('/pregled_racuna', methods=['GET'])
 def get_pregled_racuna():
     cur = mysql.connection.cursor()
@@ -278,14 +270,13 @@ def dodaj_zaposlenika():
     data = request.json
     ime = data['ime']
     prezime = data['prezime']
-    pozicija = data['pozicija']
-    adresa = data['adresa']
-    email = data['email']
-    telefon = data['telefon']
+    mjesto_rada = data['mjesto_rada']
+    placa = data['placa']
+    spol = data['spol']
 
     try:
         cur = mysql.connection.cursor()
-        cur.callproc('dodaj_zaposlenika', (ime, prezime, pozicija, adresa, email, telefon))
+        cur.callproc('dodaj_zaposlenika', (ime, prezime, mjesto_rada, placa, spol))
         mysql.connection.commit()
         cur.close()
         return jsonify({'success': True})
