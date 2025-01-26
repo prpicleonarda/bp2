@@ -35,7 +35,7 @@ def get_klub():
 @app.route('/lokacija', methods=['GET'])
 def get_lokacija():
     cur = mysql.connection.cursor()
-    cur.execute(''' SELECT * FROM lokacija ''')
+    cur.execute(''' SELECT * FROM pregled_lokacija_sa_odjelima ''')
     data = cur.fetchall()
     cur.close()
     return jsonify(data)
@@ -189,24 +189,128 @@ def get_odjeli_kategorije_proizvodi():
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/racun_detalji/<int:racun_id>', methods=['GET'])
-def racun_detalji(racun_id):
+def racun_detalji_full(racun_id):
     try:
         cur = mysql.connection.cursor()
         cur.callproc('racun_detalji', [racun_id])
         data = cur.fetchall()
         cur.close()
-        return jsonify({'success': True, 'stavke': data})
+        return jsonify({'success': True, 'racun': data})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/racun_detalji_full/<int:racun_id>', methods=['GET'])
-def racun_detalji_full(racun_id):
+@app.route('/ponisti_racun', methods=['POST'])
+def ponisti_racun():
+    data = request.json
+    racun_id = data['racun_id']
+    admin_password = data['admin_password']
+
+    # Check if the admin password is correct
+    if admin_password != users['admin']['password']:
+        return jsonify({'success': False, 'error': 'Invalid admin password'})
+
     try:
         cur = mysql.connection.cursor()
-        cur.callproc('racun_detalji_full', [racun_id])
+        cur.callproc('ponisti_racun', [racun_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/kupaci', methods=['GET'])
+def get_kupci():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM kupac')  # Adjust the query as needed
         data = cur.fetchall()
         cur.close()
-        return jsonify({'success': True, 'racun': data})
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/najcesci_kupci', methods=['GET'])
+def get_najcesci_kupci():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM najcesci_kupci')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/najbolji_kupci', methods=['GET'])
+def get_najbolji_kupci():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM najbolji_kupci')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/najbolji_zaposlenik_racuni', methods=['GET'])
+def get_najbolji_zaposlenik_racuni():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM najbolji_zaposlenik_racuni')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/najbolji_zaposlenik_zarada', methods=['GET'])
+def get_najbolji_zaposlenik_zarada():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM najbolji_zaposlenik_zarada')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/dodaj_zaposlenika', methods=['POST'])
+def dodaj_zaposlenika():
+    data = request.json
+    ime = data['ime']
+    prezime = data['prezime']
+    pozicija = data['pozicija']
+    adresa = data['adresa']
+    email = data['email']
+    telefon = data['telefon']
+
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('dodaj_zaposlenika', (ime, prezime, pozicija, adresa, email, telefon))
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/zaposlenici', methods=['GET'])
+def get_zaposlenici():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM zaposlenik')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/evidencija', methods=['GET'])
+def get_evidencija():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM evidencija')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

@@ -288,6 +288,20 @@
         background-color: white;
         color: black;
       }
+
+      .data-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .data-box {
+        background-color: #fff;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        width: calc(50% - 10px);
+      }
     </style>
   </head>
   <body>
@@ -345,11 +359,31 @@
       <div id="restricted-view" class="view" style="display: none;">
         <div class="button-container">
           <button class="data-fetch-button" id="klub">Fetch Klub Data</button>
+          <button class="data-fetch-button" id="kupaci">Fetch Kupac Data</button>
+          <button class="data-fetch-button" id="zaposlenici">Fetch Zaposlenici Data</button>
           <button class="data-fetch-button" id="lokacija">Fetch Locations Data</button>
           <button class="data-fetch-button" id="pregled_stavki_racuna">Fetch Products of Receipt Data</button>
           <button class="data-fetch-button" id="pregled_racuna">Fetch Račun Data</button>
+          <button class="data-fetch-button" id="evidencija">Evidencija</button>
         </div>
-  
+        <div class="data-container">
+          <div id="najcesci-kupci-container" class="data-box" style="display: none;">
+              <h3>Najčešći Kupci</h3>
+              <!-- Data will be populated here -->
+          </div>
+          <div id="najbolji-kupci-container" class="data-box" style="display: none;">
+              <h3>Najbolji Kupci</h3>
+              <!-- Data will be populated here -->
+          </div>
+          <div id="najbolji-zaposlenik-racuni-container" class="data-box" style="display: none;">
+              <h3>Najbolji Zaposlenik - Broj Računa</h3>
+              <!-- Data will be populated here -->
+          </div>
+          <div id="najbolji-zaposlenik-zarada-container" class="data-box" style="display: none;">
+              <h3>Najbolji Zaposlenik - Ukupan Iznos</h3>
+              <!-- Data will be populated here -->
+          </div>
+      </div>
         <div class="form-container" id="novi-racun-container">
           <h2>Kreiraj Novi Račun</h2>
           <form id="novi-racun-form">
@@ -370,6 +404,8 @@
         </div>
   
         <div id="table-container" class="table-container"></div>
+  
+        
   
         <div style="height: 50px;"></div>
   
@@ -411,7 +447,7 @@
           </form>
         </div>
   
-        <div class="form-container" id="dodaj-kupca-container">
+        <div class="form-container" id="dodaj-kupca-container" style="display: none;">
           <h2>Dodaj Kupca</h2>
           <form id="dodaj-kupca-form">
             <label for="ime">Ime:</label>
@@ -438,11 +474,38 @@
               <option value="poslovni">Poslovni</option>
             </select>
     
-            <label for="oib-firme">OIB Firme (optional):</label>
-            <input type="text" id="oib-firme" />
+            <div id="oib-container" style="display: none;">
+              <label for="oib-firme">OIB Firme:</label>
+              <input type="text" id="oib-firme" />
+            </div>
     
             <button type="submit">Dodaj Kupca</button>
           </form>
+        </div>
+
+        <div class="form-container" id="dodaj-zaposlenika-container" style="display: none;">
+            <h2>Dodaj Zaposlenika</h2>
+            <form id="dodaj-zaposlenika-form">
+                <label for="ime-zaposlenika">Ime:</label>
+                <input type="text" id="ime-zaposlenika" required />
+
+                <label for="prezime-zaposlenika">Prezime:</label>
+                <input type="text" id="prezime-zaposlenika" required />
+
+                <label for="pozicija">Pozicija:</label>
+                <input type="text" id="pozicija" required />
+
+                <label for="adresa-zaposlenika">Adresa:</label>
+                <input type="text" id="adresa-zaposlenika" required />
+
+                <label for="email-zaposlenika">Email:</label>
+                <input type="email" id="email-zaposlenika" required />
+
+                <label for="telefon">Telefon:</label>
+                <input type="text" id="telefon" required />
+
+                <button type="submit">Dodaj Zaposlenika</button>
+            </form>
         </div>
       </div>
     </div>
