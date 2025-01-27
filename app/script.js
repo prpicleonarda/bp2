@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Hide the add kupac form and data containers when other buttons are clicked
-    const otherButtons = ['klub', 'lokacija', 'pregled_proizvoda', 'pregled_racuna'];
+    const otherButtons = ['klub', 'lokacija', 'pregled_proizvoda', 'pregled_racuna', 'zaposlenici', 'evidencija'];
     otherButtons.forEach(buttonId => {
         document.getElementById(buttonId).addEventListener('click', () => {
             document.getElementById('dodaj-kupca-container').style.display = 'none';
@@ -649,16 +649,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show the add zaposlenik form
         document.getElementById('dodaj-zaposlenika-container').style.display = 'block';
 
-        // Show the data containers for employees
-        document.getElementById('najbolji-zaposlenik-racuni-container').style.display = 'block'; // Show zaposlenik data
-        document.getElementById('najbolji-zaposlenik-zarada-container').style.display = 'block'; // Show zaposlenik data
+        // Show the data containers for zaposlenici
+        document.getElementById('najbolji-zaposlenik-racuni-container').style.display = 'block';
+        document.getElementById('najbolji-zaposlenik-zarada-container').style.display = 'block';
 
         // Hide other data containers
+        document.getElementById('dodaj-kupca-container').style.display = 'none'; // Hide add kupac form
         document.getElementById('najcesci-kupci-container').style.display = 'none'; // Hide kupac data
         document.getElementById('najbolji-kupci-container').style.display = 'none'; // Hide kupac data
 
         try {
-            // Fetch data from views for employees
+            // Fetch data for najbolji zaposlenik
             const najboljiZaposlenikRacuniResponse = await fetch('http://127.0.0.1:5000/najbolji_zaposlenik_racuni');
             const najboljiZaposlenikRacuniData = await najboljiZaposlenikRacuniResponse.json();
             renderNajboljiZaposlenikRacuni(najboljiZaposlenikRacuniData);
