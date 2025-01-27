@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sortBySelect = document.getElementById('sort-by');
     const locationSelect = document.getElementById('location-select');
     const proizvodiContainer = document.getElementById('proizvodi-na-lokacijama-container');
-    const ukupnaKolicinaContainer = document.getElementById('ukupna-kolicina-proizvoda-container');
     const dodajNabavuButton = document.getElementById('dodaj-nabavu-button');
   
     let currentRacunId = null;
@@ -911,8 +910,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('najprodavaniji-proizvodi-container').style.display = 'block';
         document.getElementById('najbolja-zarada-container').style.display = 'block';
         document.getElementById('proizvodi-na-lokacijama-container').style.display = 'block'; // New container
-        document.getElementById('ukupna-kolicina-proizvoda-container').style.display = 'block'; // New container
-
         // Hide other data containers
         document.getElementById('dodaj-kupca-container').style.display = 'none'; // Hide add kupac form
         document.getElementById('najcesci-kupci-container').style.display = 'none'; // Hide kupac data
@@ -920,17 +917,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('dodaj-zaposlenika-container').style.display = 'none'; // Hide add zaposlenik form
         document.getElementById('najbolji-zaposlenik-racuni-container').style.display = 'none'; // Hide zaposlenik data
         document.getElementById('najbolji-zaposlenik-zarada-container').style.display = 'none'; // Hide zaposlenik data
-
+        proizvodiContainer.style.display = 'none';
         try {
             // Fetch data for proizvodi na lokacijama
             const proizvodiNaLokacijamaResponse = await fetch('http://127.0.0.1:5000/proizvodi_na_lokacijama');
             const proizvodiNaLokacijamaData = await proizvodiNaLokacijamaResponse.json();
             renderProizvodiNaLokacijama(proizvodiNaLokacijamaData);
 
-            // Fetch data for ukupna količina proizvoda
-            const ukupnaKolicinaResponse = await fetch('http://127.0.0.1:5000/ukupna_kolicina_proizvoda');
-            const ukupnaKolicinaData = await ukupnaKolicinaResponse.json();
-            renderUkupnaKolicinaProizvoda(ukupnaKolicinaData);
         } catch (error) {
             console.error(error);
             alert('Greška pri učitavanju podataka o proizvodima.');
@@ -940,14 +933,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch locations to populate the dropdown
     async function fetchLocations() {
         try {
-            const response = await fetch('http://127.0.0.1:5000/lokacija'); // Adjust the endpoint as needed
+            const response = await fetch('http://127.0.0.1:5000/lokacija_trgovine'); // Adjust the endpoint as needed
             const locations = await response.json();
-            locations.forEach(location => {
-                const option = document.createElement('option');
-                option.value = location.grad; // Assuming 'grad' is the location name
-                option.textContent = location.grad;
-                locationSelect.appendChild(option);
-            });
+
+            // Check if the response is an array
+            if (Array.isArray(locations)) {
+                locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location; // Assuming 'location' is the location name
+                    option.textContent = location;
+                    locationSelect.appendChild(option);
+                });
+            } else {
+                console.error('Expected an array but got:', locations);
+                alert('Greška pri učitavanju lokacija.'); // Show an error message
+            }
         } catch (error) {
             console.error('Error fetching locations:', error);
         }
@@ -1011,7 +1011,6 @@ document.addEventListener('DOMContentLoaded', () => {
             container.appendChild(table);
         }
         container.style.display = 'block'; // Show the container
-        ukupnaKolicinaContainer.style.display = 'none'; // Hide the total quantity container
     }
 
     // Function to render all products
@@ -1049,17 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ukupnaKolicinaContainer.style.display = 'none'; // Hide the total quantity container
     }
 
-    // Function to render Ukupna Količina Proizvoda
-    function renderUkupnaKolicinaProizvoda(data) {
-        const container = document.getElementById('ukupna-kolicina-proizvoda-container');
-        container.innerHTML = ''; // Clear previous content
-        data.forEach(item => {
-            const div = document.createElement('div');
-            div.textContent = `Proizvod: ${item.proizvod_naziv}, Ukupna Količina: ${item.ukupna_kolicina}`;
-            container.appendChild(div);
-        });
-    }
-
+  
     // Call fetchLocations to populate the dropdown on page load
     fetchLocations();
 
@@ -1279,6 +1268,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('dodaj-nabavu-button').addEventListener('click', () => {
         document.getElementById('dodaj-nabavu-container').style.display = 'block'; // Show the form for adding Nabava
+    });
+
+    // Handle the form submission for adding Narudžbe
+    document.getElementById('dodaj-narudzbu-form').addEventListener('submit', async (event) => {
+        event.preventDefault(); // Prevent the default form submission
+
+        const lokacijaId = document.getElementById('lokacija-id').value;
+        const kupacId = document.getElementById('kupac-id').value;
+
+        // Send the data to the server
+        try {
+            const response = await fetch('http://127.0.0.1:5000/dodaj_narudzbu', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lokacija_id: lokacijaId,
+                    kupac_id: kupacId,
+                }),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Narudžba je uspješno dodana!');
+                document.getElementById('dodaj-narudzbu-form').reset();
+                document.getElementById('dodaj-narudzbu-container').style.display = 'none';
+                fetchNarudzbe(); // Refresh the list of Narudžbe
+            } else {
+                alert('Greška: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Error adding narudzba:', error);
+            alert('Greška pri dodavanju narudžbe.');
+        }
     });
 
     // Handle the form submission for adding Nabava

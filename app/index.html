@@ -582,13 +582,31 @@
             </form>
         </div>
 
+        <!-- Form for adding Narudžbe -->
+        <div class="form-container" id="dodaj-narudzbu-container" style="display: none;">
+            <h2>Dodaj Narudžbu</h2>
+            <form id="dodaj-narudzbu-form">
+                <label for="lokacija-id">Lokacija ID:</label>
+                <input type="number" id="lokacija-id" required />
+
+                <label for="kupac-id">Kupac ID:</label>
+                <input type="number" id="kupac-id" required />
+
+                <button type="submit">Dodaj Narudžbu</button>
+            </form>
+        </div>
+
       </div>
     </div>
 
     <!-- Add the button to show the form -->
     <button id="dodaj-proizvod-button" style="display: none;">Dodaj Proizvod</button>
 
+    <div id="ukupna-kolicina-proizvoda-container" style="display: none;">
+        <h3>Ukupna Količina Proizvoda</h3>
+        <div id="ukupna-kolicina"></div>
+    </div>
+
     <script src="script.js"></script>
   </body>
 </html>
-
