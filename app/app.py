@@ -36,12 +36,26 @@ def get_klub():
 def get_lokacija():
     try:
         cur = mysql.connection.cursor()
-        cur.execute('SELECT * FROM lokacija')  # Fetch all locations
+        cur.execute('SELECT * FROM pregled_lokacija_sa_odjelima')  # Fetch all locations
         data = cur.fetchall()
         cur.close()
         return jsonify(data)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/lokacija_trgovine', methods=['GET'])
+def get_lokacija_trgovine():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT grad FROM lokacija')  # Fetch all locations
+        data = cur.fetchall()
+        cur.close()
+        # Extracting only the 'grad' values from the fetched data
+        locations = [location['grad'] for location in data]
+        return jsonify(locations)  # Send a JSON array of grad
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 
 @app.route('/pregled_racuna', methods=['GET'])
 def get_pregled_racuna():
@@ -308,6 +322,7 @@ def get_evidencija():
         return jsonify(data)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
 
 @app.route('/proizvodi_na_lokacijama', methods=['GET'])
 def get_proizvodi_na_lokacijama():
