@@ -102,17 +102,17 @@ CREATE TABLE racun (
     zaposlenik_id INT NOT NULL,
     datum DATETIME NOT NULL DEFAULT NOW(),
     nacin_placanja VARCHAR(30) NOT NULL,
-    status VARCHAR(30) NOT NULL DEFAULT "izvrseno",
+    status VARCHAR(30) NOT NULL DEFAULT "na cekanju",
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
     FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id),
     CONSTRAINT provjera_nacina_placanja CHECK (nacin_placanja = "POS" OR nacin_placanja = "gotovina"),
-    CONSTRAINT provjera_statusa_racuna CHECK (status = "izvrseno" OR status = "ponisteno")
+    CONSTRAINT provjera_statusa_racuna CHECK (status = "izvrseno" OR status = "na cekanju" OR status = "ponisteno")
 );
 
 CREATE TABLE nabava (
 	id INT AUTO_INCREMENT PRIMARY KEY,
     lokacija_id INT,
-    datum DATETIME,
+    datum DATETIME DEFAULT NOW(),
     status VARCHAR(50) DEFAULT 'na cekanju',
     CONSTRAINT provjera_statusa_nabave CHECK (status = 'na cekanju' OR status = 'izvrseno' OR status = 'ponisteno'),
     FOREIGN KEY (lokacija_id) REFERENCES lokacija(id)
@@ -123,7 +123,7 @@ CREATE TABLE narudzba (
     datum DATETIME DEFAULT NOW(),
     lokacija_id INT,
     kupac_id INT,
-    status VARCHAR(50), -- status je dozvoljena rijec za naziv atributa, iako je highlightana
+    status VARCHAR(50) DEFAULT 'na cekanju', -- status je dozvoljena rijec za naziv atributa, iako je highlightana
     FOREIGN KEY (kupac_id) REFERENCES kupac(id),
     FOREIGN KEY (lokacija_id) REFERENCES lokacija(id),
     CONSTRAINT provjera_statusa_narudzbe CHECK (status = "na cekanju" OR status = "izvrseno" OR status = "ponisteno")
@@ -153,6 +153,7 @@ CREATE TABLE inventar (
 	lokacija_id INT NOT NULL,
     proizvod_id INT NOT NULL,
     kolicina INT NOT NULL,
+    CONSTRAINT provjera_kolicine_inventara CHECK (kolicina >= 0),
     FOREIGN KEY (lokacija_id) REFERENCES lokacija(id),
     FOREIGN KEY (proizvod_id) REFERENCES proizvod(id)
 );
@@ -175,23 +176,6 @@ CREATE TABLE korisnik (
     FOREIGN KEY (zaposlenik_id) REFERENCES zaposlenik(id)
 );
 
--- POGLED ZA LOKACIJE I IMENA ODJELA NA TIM LOKACIJAMA
-CREATE OR REPLACE VIEW pregled_lokacija_sa_odjelima AS
-    SELECT l.grad AS lokacija, GROUP_CONCAT(o.naziv SEPARATOR ', ') AS odjeli
-    FROM lokacija l
-    JOIN odjel_na_lokaciji ona ON l.id = ona.lokacija_id
-    JOIN odjel o ON ona.odjel_id = o.id
-    GROUP BY l.grad;
-
-
--- POGLED ZA PROIZVODE I NJIHOVI ODJELI
-CREATE OR REPLACE VIEW pregled_proizvoda AS
-    SELECT p.*, k.naziv AS kategorija_naziv, o.naziv AS odjel_naziv
-    FROM proizvod p
-    LEFT JOIN kategorija k ON p.kategorija_id = k.id 
-    LEFT JOIN odjel o ON k.odjel_id = o.id;
-
-
 -- POGLEDI ZA STAVKE ODREĐENOG TIPA
 
 CREATE OR REPLACE VIEW predracun_stavke AS
@@ -205,7 +189,7 @@ CREATE OR REPLACE VIEW racun_stavke AS
         WHERE racun_id IS NOT NULL;
 
 CREATE OR REPLACE VIEW nabava_stavke AS
-	SELECT nabava_id, proizvod_id, proizvod_naziv, cijena, kolicina, ukupan_iznos, popust, nakon_popusta 
+	SELECT nabava_id, proizvod_id, proizvod_naziv, cijena, kolicina, ukupan_iznos
 		FROM stavka
         WHERE nabava_id IS NOT NULL;
 
@@ -319,6 +303,14 @@ CREATE OR REPLACE VIEW najbolja_zarada AS
 		GROUP BY p.id
 		ORDER BY zarada DESC;
 
+-- POGLED ZA LOKACIJE I IMENA ODJELA NA TIM LOKACIJAMA
+CREATE OR REPLACE VIEW pregled_lokacija_sa_odjelima AS
+    SELECT l.grad AS lokacija, GROUP_CONCAT(o.naziv SEPARATOR ', ') AS odjeli
+    FROM lokacija l
+    JOIN odjel_na_lokaciji ona ON l.id = ona.lokacija_id
+    JOIN odjel o ON ona.odjel_id = o.id
+    GROUP BY l.grad;
+
 -- PROCEDURA ZA STVARANJE ZAPISA U EVIDENCIJI
 
 DELIMITER //
@@ -342,20 +334,43 @@ BEGIN
 END //
 DELIMITER ;
 
+-- PROCEDURA ZA DODAVANJE NARUDZBE
+
+DELIMITER //
+CREATE PROCEDURE stvori_narudzbu(IN l_id INT, IN k_id INT)
+BEGIN
+	INSERT INTO narudzba(lokacija_id, kupac_id) VALUES (l_id, k_id);
+    
+    CALL stvori_zapis(CONCAT('Stvorena narudzba ID(', LAST_INSERT_ID() ,')'));
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA DODAVANJE NABAVE
+
+DELIMITER //
+CREATE PROCEDURE stvori_nabavu(IN l_id INT)
+BEGIN
+	INSERT INTO nabava(lokacija_id) VALUES (l_id);
+    
+    CALL stvori_zapis(CONCAT('Stvorena nabava ID(', LAST_INSERT_ID(), ')'));
+END //
+DELIMITER ;
+
 -- PROCEDURA ZA POPUNJAVANJE RACUNA
 
 DELIMITER //
 CREATE PROCEDURE dodaj_stavke(IN json_data JSON)
 BEGIN
 	
-    DECLARE pr_id, r_id, nab_id, nar_id, p_id, kol INT;
+    DECLARE pr_id, r_id, nab_id, nar_id, p_id, l_id, kol INT;
     DECLARE i INT DEFAULT 0;
-    DECLARE total_rows INT;
+    DECLARE total_rows INT;    
     
     SET total_rows = JSON_LENGTH(json_data);
 	
+    START TRANSACTION;
     WHILE i < total_rows DO
-		SELECT NULL, NULL, NULL, NULL INTO pr_id, r_id, nab_id, nar_id;
+		SELECT NULL, NULL, NULL, NULL, NULL INTO pr_id, r_id, nab_id, nar_id, l_id;
 		
 		SET p_id = JSON_UNQUOTE(JSON_EXTRACT(json_data, CONCAT('$[', i, '].proizvod_id')));
 		SET kol = JSON_UNQUOTE(JSON_EXTRACT(json_data, CONCAT('$[', i, '].kolicina')));
@@ -375,12 +390,30 @@ BEGIN
 		IF JSON_EXTRACT(json_data, CONCAT('$[', i, '].narudzba_id')) IS NOT NULL THEN
 			SET nar_id = JSON_UNQUOTE(JSON_EXTRACT(json_data, CONCAT('$[', i, '].narudzba_id')));
 		END IF;
-
+        
+        IF r_id IS NOT NULL THEN
+			IF l_id IS NULL THEN
+				SET @z_id = (SELECT zaposlenik_id FROM racun WHERE id = r_id);
+				SET l_id = (SELECT lokacija_id 
+								FROM odjel_na_lokaciji 
+								WHERE id = (SELECT mjesto_rada 
+												FROM zaposlenik 
+												WHERE id = @z_id));
+			END IF;
+            SET @inventar = (SELECT kolicina FROM inventar WHERE lokacija_id = l_id AND proizvod_id = p_id);
+            IF kol > @inventar THEN
+				ROLLBACK;
+				UPDATE racun SET status = 'ponisteno' WHERE id = r_id;
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nema dovoljno proizvoda na stanju';
+			END IF;
+		END IF;
+        
 		INSERT INTO stavka (predracun_id, racun_id, nabava_id, narudzba_id, proizvod_id, kolicina) 
 		VALUES (pr_id, r_id, nab_id, nar_id, p_id, kol);    
         
         SET i = i + 1;
     END WHILE;
+    COMMIT;
 END //
 DELIMITER ;
 
@@ -392,6 +425,33 @@ BEGIN
 	UPDATE racun SET status = "ponisteno" WHERE id = r_id;
     
     CALL stvori_zapis(CONCAT("Ponisten racun ID(", r_id ,")"));
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA PONISTAVANJE NARUDZBE
+DELIMITER //
+CREATE PROCEDURE ponisti_narudzbu(IN n_id INT)
+BEGIN
+	UPDATE narudzba SET status = "ponisteno" WHERE id = n_id;
+    
+	CALL stvori_zapis(CONCAT("Ponistena narudzba ID(", n_id, ")"));
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA PONISTAVANJE NABAVE
+
+DELIMITER //
+CREATE PROCEDURE ponisti_nabavu(IN n_id INT)
+BEGIN
+	IF (SELECT status FROM nabava WHERE id = n_id) = 'na cekanju' THEN
+		UPDATE nabava
+			SET status = 'ponisteno'
+			WHERE id = n_id;
+	ELSE
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nabava je vec prethodno procesirana';
+	END IF;
+    
+    CALL stvori_zapis(CONCAT('Ponistena nabava ID(', n_id, ')'));
 END //
 DELIMITER ;
 
@@ -410,7 +470,7 @@ DELIMITER ;
 
 DELIMITER //
 CREATE PROCEDURE dodaj_kupca(
-    IN ime VARCHAR(50), 
+	IN ime VARCHAR(50), 
     IN prezime VARCHAR(20), 
     IN spol CHAR(1), 
     IN adresa VARCHAR(100),
@@ -419,8 +479,8 @@ CREATE PROCEDURE dodaj_kupca(
     IN oib_firme CHAR(11)
 )
 BEGIN
-    INSERT INTO kupac (ime, prezime, spol, adresa, email, tip, oib_firme) 
-    VALUES (ime, prezime, spol, adresa, email, tip, oib_firme);
+    INSERT INTO kupac(ime, prezime, spol, adresa, email, tip, oib_firme) VALUES (ime, prezime, spol, adresa, email, tip, oib_firme);
+    
     CALL stvori_zapis(CONCAT("Dodan kupac ", ime, " ", prezime, " ID(", LAST_INSERT_ID() ,")"));
 END //
 DELIMITER ;
@@ -429,21 +489,18 @@ DELIMITER ;
 
 DELIMITER //
 CREATE PROCEDURE dodaj_zaposlenika(
-    IN ime VARCHAR(50), 
-    IN prezime VARCHAR(50), 
-    IN mjesto_rada INT, 
-    IN placa DECIMAL(10, 2), 
+	IN ime VARCHAR(50),
+    IN prezime VARCHAR(50),
+    IN mjesto_rada INT,
+    IN placa DECIMAL(10, 2),
     IN spol CHAR(1)
 )
 BEGIN
-    INSERT INTO zaposlenik (ime, prezime, mjesto_rada, placa, spol) 
-    VALUES (ime, prezime, mjesto_rada, placa, spol);
+	INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES (ime, prezime, mjesto_rada, placa, spol);
     
     CALL stvori_zapis(CONCAT("Dodan zaposlenik ", ime, " ", prezime, " ID(", LAST_INSERT_ID(), ")"));
 END //
 DELIMITER ;
-
-
 -- PROCEDURA ZA PROCESIRANJE NARUDZBE
 
 DELIMITER //
@@ -455,7 +512,7 @@ BEGIN
 	DECLARE cur CURSOR FOR
 		SELECT proizvod_id, kolicina FROM narudzba_stavke WHERE n_id = narudzba_id;
         
-	DECLARE EXIT HANDLER FOR NOT FOUND SET finished = 1;
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
 	
 	IF((SELECT status FROM narudzba WHERE n_id = id) != "na cekanju") THEN 
 		SIGNAL narudzba_error SET MESSAGE_TEXT = "Narudzba vec procesirana";
@@ -490,6 +547,9 @@ BEGIN
 				END IF;
 			END LOOP;
 		CLOSE cur;
+        UPDATE racun
+			SET status = "izvrseno"
+            WHERE id = @r_id;
     COMMIT;
 END //
 DELIMITER ;
@@ -522,20 +582,20 @@ BEGIN
         IF (NEW.narudzba_id IS NOT NULL) THEN
 			SET ku_id = (SELECT kupac_id FROM narudzba WHERE id = NEW.narudzba_id); 
         END IF;
-    END IF;
-    
-   IF @popust_tip = "kolicina" AND NEW.kolicina >=3 THEN
-		SET NEW.popust = 15;
-    END IF;
-    
-    IF @popust_tip = "klub" THEN
-        SET kl_id = (SELECT klub_id FROM kupac WHERE id = ku_id);
         
-        SET NEW.popust = (SELECT popust FROM klub WHERE id = kl_id);
-    END IF;
-    
-    IF (SELECT tip FROM kupac WHERE id = ku_id) = "poslovni" THEN
-		SET NEW.popust = 25;
+        IF @popust_tip = "kolicina" AND NEW.kolicina >=3 THEN
+			SET NEW.popust = 15;
+		END IF;
+		
+		IF @popust_tip = "klub" THEN
+			SET kl_id = (SELECT klub_id FROM kupac WHERE id = ku_id);
+			
+			SET NEW.popust = (SELECT popust FROM klub WHERE id = kl_id);
+		END IF;
+		
+		IF (SELECT tip FROM kupac WHERE id = ku_id) = "poslovni" THEN
+			SET NEW.popust = 25;
+		END IF;
     END IF;
     
     SET NEW.nakon_popusta = IF(NEW.popust IS NULL, NEW.ukupan_iznos, NEW.ukupan_iznos * (1 - NEW.popust/100));
@@ -593,7 +653,7 @@ BEGIN
 	
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
     
-    CREATE TEMPORARY TABLE ispis_proizvoda(
+    CREATE TEMPORARY TABLE nabava_podaci(
     proizvod_id INT, 
     na_stanju INT,
     nabavna_cijena DECIMAL(10, 2),
@@ -613,45 +673,130 @@ BEGIN
             
             IF @cijena <= 5 THEN
 				IF kol <= 50 THEN
-					INSERT INTO ispis_proizvoda VALUES (p_id, kol, @nabavna_cijena, 500);
+					INSERT INTO nabava_podaci VALUES (p_id, kol, @nabavna_cijena, 500);
 				END IF;
             END IF;
             
             IF @cijena > 5 AND @cijena <= 20 THEN
 				IF kol <= 25 THEN
-					INSERT INTO ispis_proizvoda VALUES (p_id, kol, @nabavna_cijena, 250);
+					INSERT INTO nabava_podaci VALUES (p_id, kol, @nabavna_cijena, 250);
 				END IF;
             END IF;
             
             IF @cijena > 20 AND @cijena <= 50 THEN
 				IF kol <= 10 THEN
-					INSERT INTO ispis_proizvoda VALUES (p_id, kol, @nabavna_cijena, 100);
+					INSERT INTO nabava_podaci VALUES (p_id, kol, @nabavna_cijena, 100);
 				END IF;
             END IF;
             
             IF @cijena > 50 AND @cijena <= 200 THEN
 				IF kol <= 10 THEN
-					INSERT INTO ispis_proizvoda VALUES (p_id, kol, @nabavna_cijena, 60);
+					INSERT INTO nabava_podaci VALUES (p_id, kol, @nabavna_cijena, 60);
 				END IF;
             END IF;
             
             IF @cijena > 200 AND @cijena <= 100 THEN
 				IF kol <= 5 THEN
-					INSERT INTO ispis_proizvoda VALUES (p_id, kol, @nabavna_cijena, 40);
+					INSERT INTO nabava_podaci VALUES (p_id, kol, @nabavna_cijena, 40);
 				END IF;
             END IF;
             
             IF @cijena > 1000 THEN
 				IF kol <= 5 THEN
-					INSERT INTO ispis_proizvoda VALUES (p_id, kol, @nabavna_cijena, 20);
+					INSERT INTO nabava_podaci VALUES (p_id, kol, @nabavna_cijena, 20);
 				END IF;
             END IF;
 		END LOOP;
 	CLOSE cur;
     
-    SELECT * FROM ispis_proizvoda;
+    SELECT * FROM nabava_podaci;
     
-    DROP TEMPORARY TABLE ispis_proizvoda;
+    DROP TEMPORARY TABLE nabava_podaci;
+END //
+DELIMITER ;
+
+-- PROCEDURA ZA PROCESIRANJE NABAVE
+
+DELIMITER //
+CREATE PROCEDURE procesiraj_nabavu(IN n_id INT)
+BEGIN
+	DECLARE p_id, kol INT;
+	DECLARE finished INT DEFAULT 0;
+    DECLARE cur CURSOR FOR
+		SELECT proizvod_id, kolicina 
+			FROM nabava_stavke 
+			WHERE nabava_id = n_id;
+            
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
+    
+    SET @l_id = (SELECT lokacija_id FROM nabava WHERE id = n_id); 
+    
+    IF (SELECT status FROM nabava WHERE id = n_id) != 'na cekanju' THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nabava vec procesirana.';
+	ELSE
+		OPEN cur;
+        petlja: LOOP
+			FETCH cur INTO p_id, kol;
+            
+            IF finished = 1 THEN
+				LEAVE petlja;
+            END IF;
+            
+            UPDATE inventar
+				SET kolicina = kolicina + kol
+				WHERE lokacija_id = @l_id AND proizvod_id = p_id;
+		END LOOP;
+        CLOSE cur;
+    END IF;
+    
+    UPDATE nabava
+		SET status = 'izvrseno'
+		WHERE id = n_id;
+    
+    CALL stvori_zapis(CONCAT('Izvrsena nabava ID(', LAST_INSERT_ID(), ')'));
+END //
+DELIMITER ;
+
+-- OKIDACI ZA RACUNE
+
+DELIMITER //
+CREATE TRIGGER inventar_handler
+AFTER UPDATE ON racun
+FOR EACH ROW
+BEGIN
+	DECLARE p_id, kol INT;
+    DECLARE finished INT DEFAULT 0;
+    DECLARE cur CURSOR FOR
+		SELECT proizvod_id, kolicina 
+			FROM stavka
+            WHERE racun_id = NEW.id;
+            
+	DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
+    
+    SET @l_id = (SELECT lokacija_id 
+						FROM odjel_na_lokaciji 
+						WHERE id = (SELECT mjesto_rada FROM zaposlenik WHERE id = NEW.zaposlenik_id));
+    
+    OPEN cur;
+		petlja: LOOP
+			FETCH cur INTO p_id, kol;
+            IF finished = 1 THEN
+				LEAVE petlja;
+            END IF;
+            
+			IF NEW.status = 'izvrseno' THEN
+				UPDATE inventar
+					SET kolicina = kolicina - kol
+					WHERE lokacija_id = @l_id AND proizvod_id = p_id;
+			END IF;
+            
+            IF NEW.status = 'ponisteno' THEN
+				UPDATE inventar
+					SET kolicina = kolicina + kol
+					WHERE lokacija_id = @l_id AND proizvod_id = p_id;
+			END IF;
+		END LOOP;
+    CLOSE cur;
 END //
 DELIMITER ;
 
