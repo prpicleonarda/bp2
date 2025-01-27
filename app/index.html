@@ -6,6 +6,8 @@
     <title>Trgovina "Zadnji dani"</title>
     <style>
       body {
+        width: 100%;
+        max-width: 100vw;
         font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
@@ -14,6 +16,7 @@
         align-items: center;
         min-height: 100vh;
         background-color: #f1f1f1;
+        overflow-x: hidden;
       }
 
       header {
@@ -31,9 +34,11 @@
         margin: 0;
         flex-grow: 1;
         font-size: 24px;
+        padding: 0 15px;
       }
 
       .login-button {
+        width: min-content;
         background-color: #fff;
         color: #4caf50;
         border: none;
@@ -42,6 +47,7 @@
         cursor: pointer;
         font-size: 14px;
         transition: background-color 0.3s ease;
+        margin: 0 15px;
       }
 
       .login-button:hover {
@@ -143,6 +149,7 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         border-radius: 10px;
         margin-top: 20px;
+        margin: 0 auto;
       }
 
       .form-container.active {
@@ -154,6 +161,7 @@
         margin-bottom: 5px;
         display: block;
       }
+      
 
       input,
       select,
@@ -163,6 +171,7 @@
         margin-bottom: 15px;
         border: 1px solid #ddd;
         border-radius: 10px;
+        box-sizing: border-box;
       }
 
       button {
@@ -198,7 +207,7 @@
       }
 
       .table-container {
-        width: 90%;
+        width: 100%;
         max-width: 1000px;
         margin-top: 20px;
         overflow-x: auto;
@@ -288,15 +297,40 @@
         background-color: white;
         color: black;
       }
+
+      .data-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .data-box {
+        background-color: #fff;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        width: calc(50% - 10px);
+      }
+
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+      }
     </style>
   </head>
   <body>
+    <div id="overlay" class="overlay" style="display: none;"></div>
     <header>
       <h1>Trgovina "DANI NAKON"</h1>
       <button class="login-button" id="login-button" onclick="showLogin()">Login</button>
     </header>
-    <div id="kupac-view" class="view">
-      <h2>Kupac View</h2>
+    <div id="kupac-view" class="view"> 
       <div class="content-container">
         <div class="left-panel">
           <h3>Odjeli i Kategorije</h3>
@@ -336,20 +370,40 @@
     </div>
 
     <div id="zaposlenik-view" class="view" style="display: none;">
-      <h2>Zaposlenik View</h2>
+      <h2 style="text-align: center;">Zaposlenik</h2>
       <!-- zaposlenik specific content... -->
     </div>
 
     <div id="admin-view" class="view" style="display: none;">
-      <h2>Admin View</h2>
+      <h2 style="text-align: center;">Admin</h2>
       <div id="restricted-view" class="view" style="display: none;">
         <div class="button-container">
-          <button class="data-fetch-button" id="klub">Fetch Klub Data</button>
-          <button class="data-fetch-button" id="lokacija">Fetch Locations Data</button>
-          <button class="data-fetch-button" id="pregled_stavki_racuna">Fetch Products of Receipt Data</button>
-          <button class="data-fetch-button" id="pregled_racuna">Fetch Račun Data</button>
+          <button class="data-fetch-button" id="klub">Klub</button>
+          <button class="data-fetch-button" id="kupaci">Kupci</button>
+          <button class="data-fetch-button" id="zaposlenici">Zaposlenici</button>
+          <button class="data-fetch-button" id="lokacija">Lokacije</button>
+          <button class="data-fetch-button" id="pregled_proizvoda">Proizvodi</button>
+          <button class="data-fetch-button" id="pregled_racuna">Računi</button>
+          <button class="data-fetch-button" id="evidencija">Evidencija</button>
         </div>
-  
+        <div class="data-container">
+          <div id="najcesci-kupci-container" class="data-box" style="display: none;">
+              <h3>Najčešći Kupci</h3>
+              <!-- Data will be populated here -->
+          </div>
+          <div id="najbolji-kupci-container" class="data-box" style="display: none;">
+              <h3>Najbolji Kupci</h3>
+              <!-- Data will be populated here -->
+          </div>
+          <div id="najbolji-zaposlenik-racuni-container" class="data-box" style="display: none;">
+              <h3>Najbolji Zaposlenik - Broj Računa</h3>
+              <!-- Data will be populated here -->
+          </div>
+          <div id="najbolji-zaposlenik-zarada-container" class="data-box" style="display: none;">
+              <h3>Najbolji Zaposlenik - Ukupan Iznos</h3>
+              <!-- Data will be populated here -->
+          </div>
+      </div>
         <div class="form-container" id="novi-racun-container">
           <h2>Kreiraj Novi Račun</h2>
           <form id="novi-racun-form">
@@ -370,6 +424,8 @@
         </div>
   
         <div id="table-container" class="table-container"></div>
+  
+        
   
         <div style="height: 50px;"></div>
   
@@ -411,7 +467,7 @@
           </form>
         </div>
   
-        <div class="form-container" id="dodaj-kupca-container">
+        <div class="form-container" id="dodaj-kupca-container" style="display: none;">
           <h2>Dodaj Kupca</h2>
           <form id="dodaj-kupca-form">
             <label for="ime">Ime:</label>
@@ -438,11 +494,38 @@
               <option value="poslovni">Poslovni</option>
             </select>
     
-            <label for="oib-firme">OIB Firme (optional):</label>
-            <input type="text" id="oib-firme" />
+            <div id="oib-container" style="display: none;">
+              <label for="oib-firme">OIB Firme:</label>
+              <input type="text" id="oib-firme" />
+            </div>
     
             <button type="submit">Dodaj Kupca</button>
           </form>
+        </div>
+
+        <div class="form-container" id="dodaj-zaposlenika-container" style="display: none;">
+            <h2>Dodaj Zaposlenika</h2>
+            <form id="dodaj-zaposlenika-form">
+                <label for="ime-zaposlenika">Ime:</label>
+                <input type="text" id="ime-zaposlenika" required />
+
+                <label for="prezime-zaposlenika">Prezime:</label>
+                <input type="text" id="prezime-zaposlenika" required />
+
+                <label for="mjesto_rada">ID mjesta rada:</label>
+                <input type="text" id="mjesto_rada" required />
+
+                <label for="placa">Placa:</label>
+                <input type="number" id="placa" required />
+
+                <label for="spol">Spol:</label>
+                <select id="spol" required>
+                    <option value="M">M</option>
+                    <option value="Ž">Ž</option>
+                </select>
+
+                <button type="submit">Dodaj Zaposlenika</button>
+            </form>
         </div>
       </div>
     </div>
@@ -450,3 +533,4 @@
     <script src="script.js"></script>
   </body>
 </html>
+
