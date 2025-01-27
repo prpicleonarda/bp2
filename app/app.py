@@ -34,11 +34,14 @@ def get_klub():
 
 @app.route('/lokacija', methods=['GET'])
 def get_lokacija():
-    cur = mysql.connection.cursor()
-    cur.execute(''' SELECT * FROM pregled_lokacija_sa_odjelima ''')
-    data = cur.fetchall()
-    cur.close()
-    return jsonify(data)
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM lokacija')  # Fetch all locations
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/pregled_racuna', methods=['GET'])
 def get_pregled_racuna():
@@ -103,13 +106,14 @@ def izbrisi_racun():
 def dodaj_proizvod():
     data = request.json
     naziv = data['naziv']
-    n_cijena = data['nabavna_cijena']
-    p_cijena = data['prodajna_cijena']
+    n_cijena = data['n_cijena']
+    p_cijena = data['p_cijena']
     kategorija_id = data['kategorija_id']
 
     try:
         cur = mysql.connection.cursor()
-        cur.callproc('dodaj_proizvod', [naziv, n_cijena, p_cijena, kategorija_id])
+        cur.execute('INSERT INTO proizvod (naziv, nabavna_cijena, prodajna_cijena, kategorija_id) VALUES (%s, %s, %s, %s)', 
+                    (naziv, n_cijena, p_cijena, kategorija_id))
         mysql.connection.commit()
         cur.close()
         return jsonify({'success': True})
@@ -302,6 +306,116 @@ def get_evidencija():
         data = cur.fetchall()
         cur.close()
         return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/proizvodi_na_lokacijama', methods=['GET'])
+def get_proizvodi_na_lokacijama():
+    location = request.args.get('location')
+    try:
+        cur = mysql.connection.cursor()
+        if location and location != 'svi':
+            cur.execute('SELECT * FROM proizvodi_na_lokacijama WHERE lokacija = %s', (location,))
+        else:
+            cur.execute('SELECT * FROM proizvodi_na_lokacijama')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/ukupna_kolicina_proizvoda', methods=['GET'])
+def get_ukupna_kolicina_proizvoda():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM ukupna_kolicina_proizvoda')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/pregled_proizvoda', methods=['GET'])
+def get_pregled_proizvoda():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM svi_proizvodi')  # Adjust the query as needed
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/najprodavaniji_proizvodi', methods=['GET'])
+def get_najprodavaniji_proizvodi():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM najprodavaniji_proizvodi')  # Fetch from the view
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/najbolja_zarada', methods=['GET'])
+def get_najbolja_zarada():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM najbolja_zarada')  # Fetch from the view
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/pregled_narudzba', methods=['GET'])
+def get_narudzbe():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM narudzba')  # Fetch from the view
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/pregled_nabava', methods=['GET'])
+def get_nabava():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM nabava')  # Fetch from the view
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/dodaj_narudzbu', methods=['POST'])
+def dodaj_narudzbu():
+    data = request.json
+    l_id = data['lokacija_id']
+    k_id = data['kupac_id']
+
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('CALL stvori_narudzbu(%s, %s)', (l_id, k_id))  # Call the stored procedure
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/dodaj_nabavu', methods=['POST'])
+def dodaj_nabavu():
+    data = request.json
+    l_id = data['lokacija_id']
+
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('CALL stvori_nabavu(%s)', (l_id,))  # Call the stored procedure
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

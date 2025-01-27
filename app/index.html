@@ -384,26 +384,49 @@
           <button class="data-fetch-button" id="lokacija">Lokacije</button>
           <button class="data-fetch-button" id="pregled_proizvoda">Proizvodi</button>
           <button class="data-fetch-button" id="pregled_racuna">Računi</button>
+          <button class="data-fetch-button" id="pregled_narudzba">Narudžbe</button>
+          <button class="data-fetch-button" id="pregled_nabava">Nabava</button>
           <button class="data-fetch-button" id="evidencija">Evidencija</button>
         </div>
+
+        <!-- Add the views for Najprodavaniji Proizvodi and Najbolja Zarada -->
+        <div class="tables-container" style="display: none; margin-bottom: 30px;">
+          <div id="najprodavaniji-proizvodi-container" class="data-box">
+            <h3>Najprodavaniji Proizvodi</h3>
+            <!-- Data will be populated here -->
+          </div>
+          <div id="najbolja-zarada-container" class="data-box">
+            <h3>Najbolja Zarada</h3>
+            <!-- Data will be populated here -->
+          </div>
+        </div>
+
+        <div class="sort-container">  
+          <select id="location-select" style="display: none;">
+            <option value="svi">Svi proizvodi</option>
+            <!-- Options will be populated dynamically -->
+          </select>
+        </div>
+
         <div class="data-container">
           <div id="najcesci-kupci-container" class="data-box" style="display: none;">
-              <h3>Najčešći Kupci</h3>
-              <!-- Data will be populated here -->
+            <h3>Najčešći Kupci</h3>
+            <!-- Data will be populated here -->
           </div>
           <div id="najbolji-kupci-container" class="data-box" style="display: none;">
-              <h3>Najbolji Kupci</h3>
-              <!-- Data will be populated here -->
+            <h3>Najbolji Kupci</h3>
+            <!-- Data will be populated here -->
           </div>
           <div id="najbolji-zaposlenik-racuni-container" class="data-box" style="display: none;">
-              <h3>Najbolji Zaposlenik - Broj Računa</h3>
-              <!-- Data will be populated here -->
+            <h3>Najbolji Zaposlenik - Broj Računa</h3>
+            <!-- Data will be populated here -->
           </div>
           <div id="najbolji-zaposlenik-zarada-container" class="data-box" style="display: none;">
-              <h3>Najbolji Zaposlenik - Ukupan Iznos</h3>
-              <!-- Data will be populated here -->
+            <h3>Najbolji Zaposlenik - Ukupan Iznos</h3>
+            <!-- Data will be populated here -->
           </div>
-      </div>
+        </div>
+
         <div class="form-container" id="novi-racun-container">
           <h2>Kreiraj Novi Račun</h2>
           <form id="novi-racun-form">
@@ -423,6 +446,10 @@
           </form>
         </div>
   
+        <div id="proizvodi-na-lokacijama-container" style="display: none;">
+          <h3>Proizvodi na Lokacijama</h3>
+          <div id="proizvodi-table-container"></div>
+        </div>
         <div id="table-container" class="table-container"></div>
   
         
@@ -448,7 +475,7 @@
           <button class="close-popup" id="close-popup">Zatvori</button>
         </div>
   
-        <div class="form-container" id="dodaj-proizvod-container">
+        <div class="form-container" id="dodaj-proizvod-container" style="display: none;">
           <h2>Dodaj Proizvod</h2>
           <form id="dodaj-proizvod-form">
             <label for="naziv">Naziv:</label>
@@ -490,12 +517,12 @@
     
             <label for="tip">Tip:</label>
             <select id="tip" required>
-              <option value="privatni">Privatni</option>
-              <option value="poslovni">Poslovni</option>
+              <option value="privatni">privatni</option>
+              <option value="poslovni">poslovni</option>
             </select>
-    
+            
             <div id="oib-container" style="display: none;">
-              <label for="oib-firme">OIB Firme:</label>
+              <label for="oib-firme">OIB:</label>
               <input type="text" id="oib-firme" />
             </div>
     
@@ -527,8 +554,39 @@
                 <button type="submit">Dodaj Zaposlenika</button>
             </form>
         </div>
+
+        <!-- Add the views for Narudžbe and Nabava -->
+        <div class="tables-container" style="display: none; margin-bottom: 30px;">
+            <div id="narudzbe-container" class="data-box">
+                <h3>Narudžbe</h3>
+                <!-- Data will be populated here -->
+            </div>
+            <div id="nabava-container" class="data-box">
+                <h3>Nabava</h3>
+                <!-- Data will be populated here -->
+            </div>
+        </div>
+ 
+
+        <!-- Button to add Nabavu -->
+        <button id="dodaj-nabavu-button" style="display: none;">Dodaj Nabavu</button>
+
+        <!-- Form for adding Nabava -->
+        <div class="form-container" id="dodaj-nabavu-container" style="display: none;">
+            <h2>Dodaj Nabavu</h2>
+            <form id="dodaj-nabavu-form">
+                <label for="lokacija-id-nabava">Lokacija ID:</label>
+                <input type="number" id="lokacija-id-nabava" required />
+
+                <button type="submit">Dodaj Nabavu</button>
+            </form>
+        </div>
+
       </div>
     </div>
+
+    <!-- Add the button to show the form -->
+    <button id="dodaj-proizvod-button" style="display: none;">Dodaj Proizvod</button>
 
     <script src="script.js"></script>
   </body>
