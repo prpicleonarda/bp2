@@ -567,9 +567,9 @@ DELIMITER ;
 -- PROCEDURA ZA PROCESIRANJE NARUDZBE
 
 DELIMITER //
-CREATE PROCEDURE procesiraj_narudzbu(IN n_id INT)
+CREATE PROCEDURE procesiraj_narudzbu(IN n_id INT, IN z_id INT)
 BEGIN
-	DECLARE l_id, k_id, z_id, p_id, kol INT;
+	DECLARE l_id, k_id, p_id, kol INT;
     DECLARE narudzba_error CONDITION FOR SQLSTATE '45000';
     DECLARE finished INT DEFAULT 0;
 	DECLARE cur CURSOR FOR
