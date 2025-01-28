@@ -257,6 +257,45 @@ BEGIN
 END //
 DELIMITER ;
 
+-- DETALJNIJI PREGLED NABAVE
+
+CREATE OR REPLACE VIEW pregled_nabave AS
+    SELECT n.id AS nabava_id,
+           l.grad AS lokacija,
+           n.datum,
+           n.status,
+           SUM(s.kolicina * p.nabavna_cijena) AS ukupan_iznos
+    FROM nabava n
+    INNER JOIN lokacija l ON n.lokacija_id = l.id
+    LEFT JOIN stavka s ON s.nabava_id = n.id
+    LEFT JOIN proizvod p ON s.proizvod_id = p.id
+    GROUP BY n.id;
+
+DELIMITER //
+CREATE PROCEDURE nabava_detalji(IN n_id INT)
+BEGIN
+    SELECT 
+        n.id AS nabava_id,
+        n.datum,
+        l.grad AS lokacija,
+        n.status,
+        p.naziv AS proizvod_naziv,
+        s.kolicina,
+        p.nabavna_cijena,
+        (s.kolicina * p.nabavna_cijena) AS ukupan_iznos_proizvoda,
+        (SELECT SUM(s2.kolicina * p2.nabavna_cijena) 
+         FROM stavka s2 
+         JOIN proizvod p2 ON s2.proizvod_id = p2.id 
+         WHERE s2.nabava_id = n.id) AS sveukupan_iznos
+    FROM nabava n
+    INNER JOIN lokacija l ON n.lokacija_id = l.id
+    LEFT JOIN stavka s ON s.nabava_id = n.id
+    LEFT JOIN proizvod p ON s.proizvod_id = p.id
+    WHERE n.id = n_id;
+END //
+DELIMITER ;
+
+
 -- POGLED ZA KUPCE SA NAJVECIM BROJEM RACUNA
 
 CREATE OR REPLACE VIEW najcesci_kupci AS

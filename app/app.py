@@ -4,7 +4,13 @@ from flask_cors import CORS
 import json
 
 app = Flask(__name__)
-CORS(app)
+
+# Simple CORS configuration that allows all origins
+CORS(app, 
+     resources={r"/*": {"origins": "*"}},
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
@@ -56,6 +62,17 @@ def get_lokacija_trgovine():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/lokacija_trgovine_id', methods=['GET'])
+def get_lokacija_trgovine_id():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT id, grad FROM lokacija')  # Fetch all locations
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)  # Return the complete data
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 
 @app.route('/pregled_racuna', methods=['GET'])
 def get_pregled_racuna():
@@ -85,24 +102,33 @@ def novi_racun():
 
 @app.route('/dodaj_stavke', methods=['POST'])
 def dodaj_stavke():
-    data = request.json
-    r_id = data['racun_id']
-    stavke = data['stavke']
-
-    # Add racun_id to each stavka
-    for stavka in stavke:
-        stavka['racun_id'] = r_id
-
     try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+            
+        if 'stavke' not in data:
+            return jsonify({'success': False, 'error': 'No stavke provided'}), 400
+            
+        stavke = data['stavke']
+        if not stavke:
+            return jsonify({'success': False, 'error': 'Empty stavke array'}), 400
+
         cur = mysql.connection.cursor()
-        
-        # Call the procedure with JSON data
-        cur.callproc('dodaj_stavke', [json.dumps(stavke)])
-        mysql.connection.commit()
-        cur.close()
-        return jsonify({'success': True})
+        try:
+            # Call the procedure with JSON data
+            cur.callproc('dodaj_stavke', [json.dumps(stavke)])
+            mysql.connection.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            mysql.connection.rollback()
+            print('Database error in dodaj_stavke:', str(e))  # Debug log
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            cur.close()
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print('Error in dodaj_stavke:', str(e))  # Debug log
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/izbrisi_racun', methods=['POST'])
 def izbrisi_racun():
@@ -185,6 +211,7 @@ def get_odjeli_kategorije_proizvodi():
             odjeli_kategorije_map[odjel].add(kategorija)
 
             proizvodi.append({
+                'id': row['id'],
                 'naziv': row['naziv'],
                 'nabavna_cijena': row['nabavna_cijena'],
                 'prodajna_cijena': row['prodajna_cijena'],
@@ -428,9 +455,119 @@ def dodaj_nabavu():
     try:
         cur = mysql.connection.cursor()
         cur.execute('CALL stvori_nabavu(%s)', (l_id,))  # Call the stored procedure
+        cur.execute('SELECT LAST_INSERT_ID() as nabava_id')
+        nabava_id = cur.fetchone()['nabava_id']
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True, 'nabava_id': nabava_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/procesiraj_narudzbu', methods=['POST'])
+def process_order():
+    data = request.json
+    narudzba_id = data['narudzba_id']
+    
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('procesiraj_narudzbu', [narudzba_id])
         mysql.connection.commit()
         cur.close()
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/procesiraj_nabavu', methods=['POST'])
+def process_supply():
+    data = request.json
+    nabava_id = data['nabava_id']
+    
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('procesiraj_nabavu', [nabava_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/ponisti_narudzbu', methods=['POST'])
+def cancel_order():
+    data = request.json
+    narudzba_id = data['narudzba_id']
+    
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('ponisti_narudzbu', [narudzba_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/ponisti_nabavu', methods=['POST'])
+def cancel_supply():
+    data = request.json
+    nabava_id = data['nabava_id']
+    
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('ponisti_nabavu', [nabava_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/nabava_ispis/<int:lokacija_id>', methods=['GET'])
+def get_supply_report(lokacija_id):
+    try:
+        cur = mysql.connection.cursor()
+        
+        # Call the stored procedure and fetch results in the same transaction
+        cur.execute('CALL nabava_ispis(%s)', [lokacija_id])
+        data = cur.fetchall()  # Fetch the results immediately after calling the procedure
+        
+        # If no data, return empty array instead of null
+        if not data:
+            return jsonify([])
+            
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        print('Error in get_supply_report:', str(e))  # Debug log
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/svi_proizvodi_lokacija', methods=['GET'])
+def get_all_products_by_location():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM svi_proizvodi_lokacija')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/nabava_detalji/<int:nabava_id>', methods=['GET'])
+def get_nabava_detalji(nabava_id):
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('nabava_detalji', [nabava_id])
+        data = cur.fetchall()
+        cur.close()
+        return jsonify({'success': True, 'nabava': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/nabava_ispis/<int:lokacija_id>', methods=['GET'])
+def get_nabava_ispis(lokacija_id):
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('nabava_ispis', [lokacija_id])
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

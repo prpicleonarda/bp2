@@ -5,11 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const noviRacunForm = document.getElementById('novi-racun-form');
     const popup = document.getElementById('popup');
     const closePopup = document.getElementById('close-popup');
-    const dodajStavkeForm = document.getElementById('dodaj-stavke-form');
     const stavkeContainer = document.getElementById('stavke-container');
     const addStavkaButton = document.getElementById('add-stavka');
-    const dodajProizvodForm = document.getElementById('dodaj-proizvod-form');
-    const dodajKupcaForm = document.getElementById('dodaj-kupca-form');
     const loginForm = document.getElementById('login-form');
     const kupacView = document.getElementById('kupac-view');
     const zaposlenikView = document.getElementById('zaposlenik-view');
@@ -56,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('dodaj-proizvod-button').style.display = 'block';
 
           // Fetch and display data
-        await fetchAndDisplayData(route);
+          await fetchAndDisplayData(route);
           fetchNajprodavanijiProizvodi(); // Fetch best-selling products
           fetchNajboljaZarada(); // Fetch best profit products
         } else {
@@ -70,10 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dodajNabavuButton.style.display = 'none';
 
         // Show the products container only if the "Proizvodi" button is clicked
-        if (route === 'pregled_narudzba') {
-            fetchNarudzbe(); // Fetch and display Narudžbe
-        } else if (route === 'pregled_nabava') {
-            fetchNabava(); // Fetch and display Nabava
+        if (route === 'pregled_narudzba') { 
+        } else if (route === 'pregled_nabava') {  
             dodajNabavuButton.style.display = 'block'; // Show the "Dodaj Nabavu" button
         } else {
             // Hide the forms and buttons for other sections
@@ -113,9 +108,9 @@ document.addEventListener('DOMContentLoaded', () => {
         th.textContent = key;
         headerRow.appendChild(th);
       });
-      // Add an empty header for the "Ponisti" button
+      // Add an empty header for action buttons
       const actionTh = document.createElement('th');
-      actionTh.textContent = ''; // Empty header
+      actionTh.textContent = 'Akcije';
       headerRow.appendChild(actionTh);
       thead.appendChild(headerRow);
       table.appendChild(thead);
@@ -123,36 +118,87 @@ document.addEventListener('DOMContentLoaded', () => {
       const tbody = document.createElement('tbody');
       data.forEach((row) => {
         const tr = document.createElement('tr');
-        Object.values(row).forEach((value) => {
+        let status = '';
+        
+        // First pass: find the status
+        Object.entries(row).forEach(([key, value]) => {
+          if (key.toLowerCase() === 'status') {
+            status = value ? value.toString().toLowerCase() : '';
+          }
+        });
+
+        // Second pass: create table cells
+        Object.entries(row).forEach(([key, value]) => {
           const td = document.createElement('td');
-          td.textContent = value;
+          td.textContent = value || '';
           tr.appendChild(td);
         });
   
+        // Add action column
+        const actionTd = document.createElement('td');
+        actionTd.style.display = 'flex';
+        actionTd.style.gap = '5px';
+        
         if (route === 'pregled_racuna') {
           tr.addEventListener('click', () => fetchRacunDetalji(row.racun_id || row.id));
           
-          // Add a "Ponisti" button
-          const actionTd = document.createElement('td');
-          const ponistiButton = document.createElement('button');
-          ponistiButton.textContent = 'Ponisti';
-          ponistiButton.style.backgroundColor = '#f44336'; // Red color
-          ponistiButton.style.color = 'white';
-          ponistiButton.style.border = 'none';
-          ponistiButton.style.padding = '5px 10px';
-          ponistiButton.style.borderRadius = '5px';
-          ponistiButton.style.cursor = 'pointer';
-          ponistiButton.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent triggering the row click event
-            const adminPassword = prompt('Unesite admin lozinku za poništavanje računa:');
-            if (adminPassword) {
-              ponistiRacun(row.racun_id || row.id, adminPassword);
-            }
-          });
-          actionTd.appendChild(ponistiButton);
-          tr.appendChild(actionTd);
+          // Add a "Ponisti" button only if status is not "poništeno"
+          if (status !== 'poništeno' && status !== 'ponisteno') {
+            const ponistiButton = document.createElement('button');
+            ponistiButton.textContent = 'Ponisti';
+            ponistiButton.style.backgroundColor = '#f44336';
+            ponistiButton.style.color = 'white';
+            ponistiButton.style.border = 'none';
+            ponistiButton.style.padding = '5px 10px';
+            ponistiButton.style.borderRadius = '5px';
+            ponistiButton.style.cursor = 'pointer';
+            ponistiButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const adminPassword = prompt('Unesite admin lozinku za poništavanje računa:');
+              if (adminPassword) {
+                ponistiRacun(row.racun_id || row.id, adminPassword);
+              }
+            });
+            actionTd.appendChild(ponistiButton);
+          }
+        } else if (route === 'pregled_nabava') {
+          tr.addEventListener('click', () => fetchNabavaDetalji(row.nabava_id || row.id));
+          
+          // Add buttons based on status
+          if (status === 'na cekanju') {
+            // Add "Procesiraj" button
+            const procesirajButton = document.createElement('button');
+            procesirajButton.textContent = 'Procesiraj';
+            procesirajButton.style.backgroundColor = '#4CAF50';
+            procesirajButton.style.color = 'white';
+            procesirajButton.style.border = 'none';
+            procesirajButton.style.padding = '5px 10px';
+            procesirajButton.style.borderRadius = '5px';
+            procesirajButton.style.cursor = 'pointer';
+            procesirajButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              procesirajNabavu(row.nabava_id || row.id);
+            });
+            actionTd.appendChild(procesirajButton);
+
+            // Add "Ponisti" button
+            const ponistiButton = document.createElement('button');
+            ponistiButton.textContent = 'Ponisti';
+            ponistiButton.style.backgroundColor = '#f44336';
+            ponistiButton.style.color = 'white';
+            ponistiButton.style.border = 'none';
+            ponistiButton.style.padding = '5px 10px';
+            ponistiButton.style.borderRadius = '5px';
+            ponistiButton.style.cursor = 'pointer';
+            ponistiButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              ponistiNabavu(row.nabava_id || row.id);
+            });
+            actionTd.appendChild(ponistiButton);
+          }
         }
-  
+        
+        tr.appendChild(actionTd);
         tbody.appendChild(tr);
       });
   
@@ -620,12 +666,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.classList.add('product-box');
         div.innerHTML = `
-          <img src="assets/pic.jpg" alt="${proizvod.naziv}" />
-          <h4>${proizvod.naziv}</h4>
-          <p>Nabavna Cijena: ${proizvod.nabavna_cijena}</p>
-          <p>Prodajna Cijena: ${proizvod.prodajna_cijena}</p>
-          <p>Kategorija: ${proizvod.kategorija}</p>
-          <p>Odjel: ${proizvod.odjel}</p>
+          <img src="assets/${proizvod.id}.jpg" alt="${proizvod.naziv}" />
+          <h4>${proizvod.naziv}</h4> 
+          <p>Prodajna Cijena: ${proizvod.prodajna_cijena} €</p> 
         `;
         grid.appendChild(div);
       });
@@ -1013,42 +1056,6 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.display = 'block'; // Show the container
     }
 
-    // Function to render all products
-    function renderAllProducts(data) {
-        const container = document.getElementById('proizvodi-na-lokacijama-container');
-        container.innerHTML = ''; // Clear previous content
-
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-
-        // Create table headers
-        const headers = ['Proizvod', 'Količina'];
-        headers.forEach(header => {
-            const th = document.createElement('th');
-            th.textContent = header;
-            headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
-
-        const tbody = document.createElement('tbody');
-        data.forEach(item => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${item.proizvod_naziv}</td>
-                <td>${item.kolicina}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        container.appendChild(table);
-
-        container.style.display = 'block'; // Show the container
-        ukupnaKolicinaContainer.style.display = 'none'; // Hide the total quantity container
-    }
-
-  
     // Call fetchLocations to populate the dropdown on page load
     fetchLocations();
 
@@ -1148,199 +1155,282 @@ document.addEventListener('DOMContentLoaded', () => {
     // Call these functions when the page loads or when the relevant button is clicked
     fetchNajprodavanijiProizvodi();
     fetchNajboljaZarada();
-
-    // Fetch Narudžbe data
-    async function fetchNarudzbe() {
-        try {
-            const response = await fetch('http://127.0.0.1:5000/pregled_narudzba');
-            const data = await response.json();
-            renderNarudzbe(data);
-        } catch (error) {
-            console.error('Error fetching narudzbe:', error);
-        }
-    }
-
-    function renderNarudzbe(data) {
-        const container = document.getElementById('narudzbe-container');
-        container.innerHTML = ''; // Clear previous content
-
-        if (data.length === 0) {
-            container.innerHTML = '<p>No narudzbe available.</p>';
-        } else {
-            const table = document.createElement('table');
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-
-            // Create table headers
-            const headers = ['ID', 'Lokacija ID', 'Kupac ID', 'Datum'];
-            headers.forEach(header => {
-                const th = document.createElement('th');
-                th.textContent = header;
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-
-            const tbody = document.createElement('tbody');
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${item.lokacija_id}</td>
-                    <td>${item.kupac_id}</td>
-                    <td>${item.datum}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            container.appendChild(table);
-        }
-        container.style.display = 'block'; // Show the container
-    }
-
-    // Fetch Nabava data
-    async function fetchNabava() {
-        try {
-            const response = await fetch('http://127.0.0.1:5000/pregled_nabava');
-            const data = await response.json();
-            renderNabava(data);
-        } catch (error) {
-            console.error('Error fetching nabava:', error);
-        }
-    }
-
-    function renderNabava(data) {
-        const container = document.getElementById('nabava-container');
-        container.innerHTML = ''; // Clear previous content
-
-        if (data.length === 0) {
-            container.innerHTML = '<p>No nabava available.</p>';
-        } else {
-            const table = document.createElement('table');
-            const thead = document.createElement('thead');
-            const headerRow = document.createElement('tr');
-
-            // Create table headers
-            const headers = ['ID', 'Lokacija ID', 'Datum'];
-            headers.forEach(header => {
-                const th = document.createElement('th');
-                th.textContent = header;
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-
-            const tbody = document.createElement('tbody');
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${item.id}</td>
-                    <td>${item.lokacija_id}</td>
-                    <td>${item.datum}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            container.appendChild(table);
-        }
-        container.style.display = 'block'; // Show the container
-    }
-
-    // Add event listeners for the new buttons
-    document.getElementById('pregled_narudzba').addEventListener('click', async () => {
-        // Hide all databoxes except for the zaposlenik databox
-        const allDataBoxes = document.querySelectorAll('.data-box');
-        allDataBoxes.forEach(box => {
-            box.style.display = 'none'; // Hide all databoxes
-        });  
-        
-        fetchNarudzbe(); // Fetch and display Narudžbe
-        document.getElementById('dodaj-nabavu-button').style.display = 'none'; // Hide the "Dodaj Nabavu" button
-    });
  
- 
-    // Add event listeners for the Nabava button
-    document.getElementById('pregled_nabava').addEventListener('click', async () => {
-        // Show the Nabava container
-        fetchNabava(); // Fetch and display Nabava
-        document.getElementById('dodaj-nabavu-button').style.display = 'block'; // Show the "Dodaj Nabavu" button
-       });
-
-    document.getElementById('dodaj-nabavu-button').addEventListener('click', () => {
-        document.getElementById('dodaj-nabavu-container').style.display = 'block'; // Show the form for adding Nabava
-    });
-
-    // Handle the form submission for adding Narudžbe
-    document.getElementById('dodaj-narudzbu-form').addEventListener('submit', async (event) => {
-        event.preventDefault(); // Prevent the default form submission
-
-        const lokacijaId = document.getElementById('lokacija-id').value;
-        const kupacId = document.getElementById('kupac-id').value;
-
-        // Send the data to the server
+    async function ponistiNabavu(nabavaId) {
         try {
-            const response = await fetch('http://127.0.0.1:5000/dodaj_narudzbu', {
+            const response = await fetch('http://127.0.0.1:5000/ponisti_nabavu', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    lokacija_id: lokacijaId,
-                    kupac_id: kupacId,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nabava_id: nabavaId }),
             });
 
-            const result = await response.json();
-            if (result.success) {
-                alert('Narudžba je uspješno dodana!');
-                document.getElementById('dodaj-narudzbu-form').reset();
-                document.getElementById('dodaj-narudzbu-container').style.display = 'none';
-                fetchNarudzbe(); // Refresh the list of Narudžbe
+            const data = await response.json();
+            if (data.success) {
+                alert('Nabava uspješno poništena!');
+                await fetchAndDisplayData('pregled_nabava');
             } else {
-                alert('Greška: ' + result.error);
+                alert(`Greška: ${data.error}`);
             }
         } catch (error) {
-            console.error('Error adding narudzba:', error);
-            alert('Greška pri dodavanju narudžbe.');
+            console.error(error);
+            alert('Greška pri poništavanju nabave.');
         }
-    });
+    }
 
-    // Handle the form submission for adding Nabava
-    document.getElementById('dodaj-nabavu-form').addEventListener('submit', async (event) => {
-        event.preventDefault(); // Prevent the default form submission
-
-        const lokacijaIdNabava = document.getElementById('lokacija-id-nabava').value;
-
-        // Send the data to the server
+    async function fetchNabavaDetalji(nabavaId) {
         try {
-            const response = await fetch('http://127.0.0.1:5000/dodaj_nabavu', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    lokacija_id: lokacijaIdNabava,
-                }),
-            });
+            const response = await fetch(`http://127.0.0.1:5000/nabava_detalji/${nabavaId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch nabava details');
+            }
 
-            const result = await response.json();
-            if (result.success) {
-                alert('Nabava je uspješno dodana!');
-                document.getElementById('dodaj-nabavu-form').reset();
-                document.getElementById('dodaj-nabavu-container').style.display = 'none';
-                fetchNabava(); // Refresh the list of Nabava
+            const data = await response.json();
+            if (data.success) {
+                renderNabavaPopup(data.nabava);
             } else {
-                alert('Greška: ' + result.error);
+                alert(`Error: ${data.error}`);
             }
         } catch (error) {
-            console.error('Error adding nabava:', error);
-            alert('Greška pri dodavanju nabave.');
+            console.error(error);
+            alert('Error fetching nabava details.');
+        }
+    }
+
+    function renderNabavaPopup(nabavaDetails) {
+        if (!nabavaDetails.length) {
+            alert('No details available for this nabava.');
+            return;
+        }
+
+        const nabavaInfo = nabavaDetails[0];
+        const stavkeList = nabavaDetails.map(stavka => `
+            <tr>
+                <td>${stavka.proizvod_naziv || '-'}</td>
+                <td>${stavka.kolicina || '-'}</td>
+                <td>${stavka.nabavna_cijena + ' €' || '-'}</td>
+            </tr>
+        `).join('');
+
+        const popupContent = `
+            <h2>Nabava ID: ${nabavaInfo.nabava_id}</h2>
+            <p>Datum: ${new Date(nabavaInfo.datum).toLocaleString()}</p>
+            <p>Lokacija: ${nabavaInfo.lokacija}</p>
+            <table class="receipt-table">
+                <thead>
+                    <tr>
+                        <th>Proizvod</th>
+                        <th>Količina</th>
+                        <th>Cijena</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${stavkeList}
+                </tbody>
+            </table>
+            <table class="total-table" style="margin-top: 10px;">
+                <tr>
+                    <td><strong>Ukupno:</strong></td>
+                    <td>${nabavaInfo.sveukupan_iznos + ' €' || '-'}</td>
+                </tr>
+            </table>
+            <button class="close-popup" id="close-popup">Zatvori</button>
+        `;
+
+        popup.innerHTML = popupContent;
+        popup.style.display = 'flex';
+
+        document.getElementById('close-popup').addEventListener('click', () => {
+            popup.style.display = 'none';
+        });
+    }
+
+    // Add event listener for "Dodaj Nabavu" button
+    dodajNabavuButton.addEventListener('click', async () => {
+        try {
+            // Fetch locations with IDs
+            const response = await fetch('http://127.0.0.1:5000/lokacija_trgovine_id');
+            const locations = await response.json();
+
+            // Show the popup with location selection
+            popup.innerHTML = `
+                <h2>Nova Nabava</h2>
+                <form id="odabir-lokacije-form">
+                    <div style="margin-bottom: 20px;">
+                        <label for="lokacija-select">Odaberite Lokaciju:</label>
+                        <select id="lokacija-select" required>
+                            <option value="">-- Odaberite Lokaciju --</option>
+                            ${locations.map(location => `
+                                <option value="${location.id}">${location.grad}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="submit">Nastavi</button>
+                    </div>
+                </form>
+                <button class="close-popup" id="close-popup">Zatvori</button>
+            `;
+            popup.style.display = 'flex';
+
+            // Add event listener for closing the popup
+            document.getElementById('close-popup').addEventListener('click', () => {
+                popup.style.display = 'none';
+            });
+
+            // Handle location selection
+            document.getElementById('odabir-lokacije-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const lokacijaId = document.getElementById('lokacija-select').value;
+                const selectedLocation = locations.find(loc => loc.id === parseInt(lokacijaId));
+                
+                if (!lokacijaId) {
+                    alert('Molimo odaberite lokaciju.');
+                    return;
+                }
+
+                try {
+                    // Fetch the low stock information directly using the selected location ID
+                    const response = await fetch(`http://127.0.0.1:5000/nabava_ispis/${lokacijaId}`);
+                    const data = await response.json();
+
+                    if (!data || data.length === 0) {
+                        alert('Nema proizvoda kojima je potrebna nabava za ovu lokaciju.');
+                        return;
+                    }
+
+                    // Show the popup with the low stock information
+                    popup.innerHTML = `
+                        <h2>Proizvodi za Nabavu - ${selectedLocation.grad}</h2>
+                        <form id="dodaj-nabavu-form">
+                            <div id="nabava-proizvodi-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Proizvod ID</th>
+                                            <th>Trenutno Stanje</th>
+                                            <th>Nabavna Cijena</th>
+                                            <th>Preporučena Količina</th>
+                                            <th>Količina za Naručiti</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.map(item => `
+                                            <tr>
+                                                <td>${item.proizvod_id}</td>
+                                                <td>${item.na_stanju}</td>
+                                                <td>${item.nabavna_cijena} €</td>
+                                                <td>${item.nabava_kolicina}</td>
+                                                <td>
+                                                    <input type="number" 
+                                                        class="kolicina-input" 
+                                                        data-proizvod-id="${item.proizvod_id}"
+                                                        value="${item.nabava_kolicina}"
+                                                        min="1"
+                                                        required
+                                                    />
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                                <button type="submit">Kreiraj Nabavu</button>
+                            </div>
+                        </form>
+                        <button class="close-popup" id="close-popup">Zatvori</button>
+                    `;
+
+                    // Add event listener for closing the popup
+                    document.getElementById('close-popup').addEventListener('click', () => {
+                        popup.style.display = 'none';
+                    });
+
+                    // Handle form submission
+                    document.getElementById('dodaj-nabavu-form').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        try {
+                            // Create the nabava with the selected location ID
+                            const createNabavaResponse = await fetch('http://127.0.0.1:5000/dodaj_nabavu', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lokacija_id: lokacijaId }),
+                            });
+
+                            const nabavaData = await createNabavaResponse.json();
+                            if (nabavaData.success) {
+                                const nabavaId = nabavaData.nabava_id;
+
+                                // Get all the quantities from inputs
+                                const stavke = Array.from(document.querySelectorAll('.kolicina-input'))
+                                    .map(input => ({
+                                        proizvod_id: input.dataset.proizvodId,
+                                        kolicina: input.value,
+                                        nabava_id: nabavaId
+                                    }))
+                                    .filter(stavka => stavka.kolicina > 0);
+
+                                // Add the stavke
+                                const addStavkeResponse = await fetch('http://127.0.0.1:5000/dodaj_stavke', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ stavke }),
+                                });
+
+                                const stavkeData = await addStavkeResponse.json();
+                                if (stavkeData.success) {
+                                    alert('Nabava uspješno kreirana!');
+                                    popup.style.display = 'none';
+                                    await fetchAndDisplayData('pregled_nabava');
+                                } else {
+                                    alert(`Greška pri dodavanju stavki: ${stavkeData.error}`);
+                                }
+                            } else {
+                                alert(`Greška pri kreiranju nabave: ${nabavaData.error}`);
+                            }
+                        } catch (error) {
+                            console.error(error);
+                            alert('Greška pri kreiranju nabave.');
+                        }
+                    });
+
+                } catch (error) {
+                    console.error(error);
+                    alert('Greška pri dohvaćanju podataka o stanju proizvoda.');
+                }
+            });
+
+        } catch (error) {
+            console.error(error);
+            alert('Greška pri dohvaćanju lokacija.');
         }
     });
-  });
-  
-  function showLogin() {
+
+    async function procesirajNabavu(nabavaId) {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/procesiraj_nabavu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nabava_id: nabavaId }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Nabava uspješno procesirana!');
+          await fetchAndDisplayData('pregled_nabava');
+        } else {
+          alert(`Greška: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Greška pri procesiranju nabave.');
+      }
+    }
+
+});
+
+function showLogin() {
     document.getElementById('kupac-view').style.display = 'none';
     document.getElementById('login-view').style.display = 'block';
-  }
-  
+}
