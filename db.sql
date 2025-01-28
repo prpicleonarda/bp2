@@ -258,7 +258,7 @@ CREATE VIEW najbolji_zaposlenik_zarada AS
 		INNER JOIN racun AS r ON pr.racun_id = r.id
 		INNER JOIN zaposlenik AS z ON r.zaposlenik_id = z.id
 		GROUP BY z.id
-		ORDER BY ukupan_iznos;
+		ORDER BY ukupan_iznos DESC;
     
 -- POGLED ZA NAJVISE PRODAVAN PROIZVOD
 
@@ -281,15 +281,6 @@ CREATE OR REPLACE VIEW najbolja_zarada AS
         WHERE r.status = "izvrseno"
 		GROUP BY p.id
 		ORDER BY zarada DESC;
-
--- POGLED ZA LOKACIJE I IMENA ODJELA NA TIM LOKACIJAMA
-
-CREATE OR REPLACE VIEW pregled_lokacija_sa_odjelima AS
-    SELECT l.grad AS lokacija, GROUP_CONCAT(o.naziv SEPARATOR ', ') AS odjeli
-    FROM lokacija l
-    JOIN odjel_na_lokaciji ona ON l.id = ona.lokacija_id
-    JOIN odjel o ON ona.odjel_id = o.id
-    GROUP BY l.grad;
     
 /*******************************************************************************
 		PROCEDURE / PROCEDURES
@@ -922,6 +913,92 @@ CREATE OR REPLACE VIEW svi_proizvodi_lokacija AS
 	LEFT JOIN odjel_na_lokaciji AS onl ON i.lokacija_id = onl.lokacija_id
 	LEFT JOIN lokacija AS l ON onl.lokacija_id = l.id;
 
+-- POGLED ZA PROIZVODE I NJIHOVI ODJELI
+
+CREATE OR REPLACE VIEW pregled_proizvoda AS
+    SELECT p.*, k.naziv AS kategorija_naziv, o.naziv AS odjel_naziv
+    FROM proizvod p
+    LEFT JOIN kategorija k ON p.kategorija_id = k.id 
+    LEFT JOIN odjel o ON k.odjel_id = o.id;
+ 
+DELIMITER //
+
+CREATE PROCEDURE predracun_detalji(IN p_id INT)
+BEGIN
+    SELECT 
+        p.id AS predracun_id,
+        p.datum,
+        p.nacin_placanja,
+        (SELECT grad
+FROM lokacija
+            WHERE id =(SELECT lokacija_id 
+FROM odjel_na_lokaciji 
+WHERE id = (SELECT mjesto_rada FROM zaposlenik WHERE id = z.id))) AS lokacija,
+        p.status,
+        CONCAT(z.ime, ' ', z.prezime) AS zaposlenik_ime,
+        IFNULL(CONCAT(k.ime, ' ', k.prezime), 'N/A') AS kupac_ime,
+        s.proizvod_naziv,
+        s.kolicina,
+        s.cijena,
+        s.popust,
+        s.nakon_popusta,
+        (SELECT SUM(s2.nakon_popusta) FROM stavka s2 WHERE s2.predracun_id = p.id) AS ukupan_iznos
+    FROM predracun p
+    INNER JOIN zaposlenik z ON p.zaposlenik_id = z.id 
+    LEFT JOIN kupac k ON p.kupac_id = k.id
+    LEFT JOIN stavka s ON s.predracun_id = p.id
+    WHERE p.id = p_id;
+END //
+DELIMITER ;
+ 
+-- DETALJNIJI PREGLED NABAVE
+
+CREATE OR REPLACE VIEW pregled_nabave AS
+    SELECT n.id AS nabava_id,
+           l.grad AS lokacija,
+           n.datum,
+           n.status,
+           SUM(s.kolicina * p.nabavna_cijena) AS ukupan_iznos
+    FROM nabava n
+    INNER JOIN lokacija l ON n.lokacija_id = l.id
+    LEFT JOIN stavka s ON s.nabava_id = n.id
+    LEFT JOIN proizvod p ON s.proizvod_id = p.id
+    GROUP BY n.id;
+
+DELIMITER //
+CREATE PROCEDURE nabava_detalji(IN n_id INT)
+BEGIN
+    SELECT 
+        n.id AS nabava_id,
+        n.datum,
+        l.grad AS lokacija,
+        n.status,
+        p.naziv AS proizvod_naziv,
+        s.kolicina,
+        p.nabavna_cijena,
+        (s.kolicina * p.nabavna_cijena) AS ukupan_iznos_proizvoda,
+        (SELECT SUM(s2.kolicina * p2.nabavna_cijena) 
+         FROM stavka s2 
+         JOIN proizvod p2 ON s2.proizvod_id = p2.id 
+         WHERE s2.nabava_id = n.id) AS sveukupan_iznos
+    FROM nabava n
+    INNER JOIN lokacija l ON n.lokacija_id = l.id
+    LEFT JOIN stavka s ON s.nabava_id = n.id
+    LEFT JOIN proizvod p ON s.proizvod_id = p.id
+    WHERE n.id = n_id;
+END //
+DELIMITER ;
+ 
+-- POGLED ZA PROIZVODE NA LOKACIJAMA
+
+CREATE OR REPLACE VIEW proizvodi_na_lokacijama AS
+    SELECT p.id AS proizvod_id, p.naziv AS proizvod_naziv, l.grad AS lokacija, SUM(i.kolicina) AS kolicina
+    FROM proizvod p
+    JOIN inventar i ON p.id = i.proizvod_id
+    JOIN lokacija l ON i.lokacija_id = l.id
+    GROUP BY p.id, l.grad;
+
+
 /*******************************************************************************
 		UCITAVANJE PODATAKA
 *******************************************************************************/
@@ -960,20 +1037,18 @@ INSERT INTO odjel_na_lokaciji(odjel_id, lokacija_id) VALUES
 (4, 3),
 (1, 4),
 (2, 4),
-(3, 4),
 (4, 4),
 (1, 5),
 (2, 5),
-(3, 5),
 (4, 5),
 (1, 6),
-(2, 6),
 (3, 6),
 (4, 6);
 
 INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES
 ("Zvonimir", "Krtić", 1, 1200, "M"),
 ("Viktor", "Lovreković", 1, 1200, "M"),
+("Klara", "Šimek", 1, 1200, "Ž"),
 ("Božo", "Prskalo", 2, 1100, "M"),
 ("Vanesa", "Marijanović", 2, 1100, "Ž"),
 ("Siniša", "Fabijanić", 3, 1050, "M"),
@@ -982,12 +1057,14 @@ INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES
 ("Gordana", "Josić", 4, 1150, "Ž"),
 ("Nika", "Jelinić", 5, 1250, "Ž"),
 ("Igor", "Žanić", 5, 1250, "M"),
+("Mario", "Vedrić", 5, 1250, "M"),
 ("Dario", "Volarević", 6, 1300, "M"),
 ("Anica", "Ilić", 6, 1300, "Ž"),
 ("Božo", "Vrban", 7, 1100, "M"),
 ("Antonio", "Kuzmić", 7, 1100, "M"),
 ("Stela", "Tomšić", 8, 1050, "Ž"),
 ("Matej", "Vrdoljak", 8, 1050, "M"),
+("Juraj", "Ivanković", 9, 1200, "M"),
 ("Darko", "Jušić", 9, 1200, "M"),
 ("Marta", "Miloš", 9, 1200, "Ž"),
 ("Miroslav", "Stipanović", 10, 1250, "M"),
@@ -998,6 +1075,7 @@ INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES
 ("Oliver", "Andrešić", 12, 1000, "M"),
 ("Irena", "Kadić", 13, 1150, "Ž"),
 ("Jan", "Buzov", 13, 1150, "M"),
+("Katarina", "Pavlinić", 13, 1150, "Ž"),
 ("Saša", "Jagić", 14, 1200, "M"),
 ("Domagoj", "Parlov", 14, 1200, "M"),
 ("Sanja", "Franjić", 15, 1000, "Ž"),
@@ -1006,6 +1084,7 @@ INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES
 ("Zvonko", "Brgan", 16, 950, "M"),
 ("Boris", "Lekić", 17, 1200, "M"),
 ("Lara", "Žunić", 17, 1200, "Ž"),
+("Josip", "Vincek", 17, 1200, "M"),
 ("Ena", "Merlin", 18, 1100, "Ž"),
 ("Emanuel", "Šimunić", 18, 1100, "M"),
 ("Patricija", "Bistrović", 19, 1000, "Ž"),
@@ -1014,12 +1093,7 @@ INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES
 ("Gabrijel", "Stipić", 20, 900, "M"),
 ("Denis", "Radovanović", 21, 1300, "M"),
 ("Karolina", "Velić", 21, 1300, "Ž"),
-("Klara", "Šimek", 22, 1150, "Ž"),
-("Mario", "Vedrić", 22, 1150, "M"),
-("Juraj", "Ivanković", 23, 1050, "M"),
-("Katarina", "Pavlinić", 23, 1050, "Ž"),
-("Josip", "Vincek", 24, 950, "M"),
-("Mia", "Klaić", 24, 950, "Ž");
+("Mia", "Klaić", 21, 1300, "Ž");
 
 INSERT INTO kupac(ime, prezime, spol, adresa, email, tip, oib_firme, klub_id) VALUES
 ("Krešimir", "Gavranić", "M", "Splitska 3", "kgavranic@gmail.com", "privatni", NULL, 1),
