@@ -486,6 +486,7 @@
           <button class="data-fetch-button" id="zaposlenici">Zaposlenici</button>
           <button class="data-fetch-button" id="lokacija">Lokacije</button>
           <button class="data-fetch-button" id="pregled_proizvoda">Proizvodi</button>
+          <button class="data-fetch-button" id="pregled_predracuna">Predračuni</button>
           <button class="data-fetch-button" id="pregled_racuna">Računi</button>
           <button class="data-fetch-button" id="pregled_narudzba">Narudžbe</button>
           <button class="data-fetch-button" id="pregled_nabava">Nabava</button>
@@ -692,11 +693,27 @@
             </form>
         </div>
 
+        <div class="form-container" id="novi-predracun-container">
+          <h2>Kreiraj Novi Predračun</h2>
+          <form id="novi-predracun-form">
+            <label for="kupac-id-predracun">Kupac ID:</label>
+            <input type="text" id="kupac-id-predracun" />
+
+            <label for="zaposlenik-id-predracun">Zaposlenik ID:</label>
+            <input type="number" id="zaposlenik-id-predracun" required min="1" />
+
+            <label for="nacin-placanja-predracun">Način Plaćanja:</label>
+            <select id="nacin-placanja-predracun" required>
+              <option value="Gotovina">Gotovina</option>
+              <option value="POS">POS</option>
+            </select>
+
+            <button type="submit">Kreiraj Predračun</button>
+          </form>
+        </div>
+
       </div>
     </div>
-
-    <!-- Add the button to show the form -->
-    <button id="dodaj-proizvod-button" style="display: none;">Dodaj Proizvod</button>
 
     <div id="stavke-popup" class="popup">
         <div class="popup-content">

@@ -571,5 +571,71 @@ def get_nabava_ispis(lokacija_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/pregled_predracuna', methods=['GET'])
+def get_pregled_predracuna():
+    try:
+        cur = mysql.connection.cursor()
+        cur.execute('SELECT * FROM pregled_predracuna')
+        data = cur.fetchall()
+        cur.close()
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/novi_predracun', methods=['POST'])
+def novi_predracun():
+    data = request.json
+    k_id = data.get('kupac_id')
+    z_id = data['zaposlenik_id']
+    nacin_placanja = data['nacin_placanja']
+
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('stvori_predracun', [k_id, z_id, nacin_placanja])
+        cur.execute("SELECT LAST_INSERT_ID() as predracun_id")
+        predracun_id = cur.fetchone()['predracun_id']
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True, 'predracun_id': predracun_id})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/predracun_detalji/<int:predracun_id>', methods=['GET'])
+def predracun_detalji(predracun_id):
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('predracun_detalji', [predracun_id])
+        data = cur.fetchall()
+        cur.close()
+        return jsonify({'success': True, 'predracun': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/procesiraj_predracun', methods=['POST'])
+def procesiraj_predracun():
+    data = request.json
+    predracun_id = data['predracun_id']
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('procesiraj_predracun', [predracun_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/ponisti_predracun', methods=['POST'])
+def ponisti_predracun():
+    data = request.json
+    predracun_id = data['predracun_id']
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('ponisti_predracun', [predracun_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     app.run(debug=True)

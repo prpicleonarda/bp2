@@ -33,12 +33,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const route = button.id;
   
         // Hide the location select dropdown initially
-        locationSelect.style.display = 'none'; // Hide the dropdown by default
+        locationSelect.style.display = 'none';
+        
+        // Hide all special forms by default
+        document.getElementById('novi-predracun-container').style.display = 'none';
   
         if (route === 'pregled_racuna') {
           noviRacunContainer.classList.add('active');
         } else {
           noviRacunContainer.classList.remove('active');
+        }
+  
+        if (route === 'pregled_predracuna') {
+          document.getElementById('novi-predracun-container').style.display = 'block';
         }
   
         // Show the products container only if the "Proizvodi" button is clicked
@@ -49,8 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // Show the tables for najprodavaniji proizvodi and najbolja zarada
           document.querySelector('.tables-container').style.display = 'flex'; // Show the tables container
 
-          // Show the "Dodaj Proizvod" button
-          document.getElementById('dodaj-proizvod-button').style.display = 'block';
+          // Show the "Dodaj Proizvod" form
+          document.getElementById('dodaj-proizvod-container').style.display = 'block';
 
           // Fetch and display data
           await fetchAndDisplayData(route);
@@ -59,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           proizvodiContainer.style.display = 'none'; // Hide the products container
           document.querySelector('.tables-container').style.display = 'none'; // Hide the tables container
-          document.getElementById('dodaj-proizvod-button').style.display = 'none'; // Hide the "Dodaj Proizvod" button
+          document.getElementById('dodaj-proizvod-container').style.display = 'none'; // Hide the "Dodaj Proizvod" form
           await fetchAndDisplayData(route);
         }
 
@@ -196,6 +203,41 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             actionTd.appendChild(ponistiButton);
           }
+        } else if (route === 'pregled_predracuna') {
+          tr.addEventListener('click', () => fetchPredracunDetalji(row.predracun_id || row.id));
+          
+          // Add buttons based on status
+          if (status !== 'ponisteno' && status !== 'izvrseno') {
+            // Add "Procesiraj" button
+            const procesirajButton = document.createElement('button');
+            procesirajButton.textContent = 'Procesiraj';
+            procesirajButton.style.backgroundColor = '#4CAF50';
+            procesirajButton.style.color = 'white';
+            procesirajButton.style.border = 'none';
+            procesirajButton.style.padding = '5px 10px';
+            procesirajButton.style.borderRadius = '5px';
+            procesirajButton.style.cursor = 'pointer';
+            procesirajButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              procesirajPredracun(row.predracun_id || row.id);
+            });
+            actionTd.appendChild(procesirajButton);
+
+            // Add "Ponisti" button
+            const ponistiButton = document.createElement('button');
+            ponistiButton.textContent = 'Ponisti';
+            ponistiButton.style.backgroundColor = '#f44336';
+            ponistiButton.style.color = 'white';
+            ponistiButton.style.border = 'none';
+            ponistiButton.style.padding = '5px 10px';
+            ponistiButton.style.borderRadius = '5px';
+            ponistiButton.style.cursor = 'pointer';
+            ponistiButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              ponistiPredracun(row.predracun_id || row.id);
+            });
+            actionTd.appendChild(ponistiButton);
+          }
         }
         
         tr.appendChild(actionTd);
@@ -309,9 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="stavke-container">
                   <div class="stavka">
                     <label>Proizvod ID:</label>
-                    <input type="number" class="proizvod-id" required min="1" />
+                    <input type="number" class="proizvod-id" required min="0" />
                     <label>Količina:</label>
-                    <input type="number" class="kolicina" required min="1" />
+                    <input type="number" class="kolicina" required min="0" />
                   </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
@@ -334,9 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
               stavkaDiv.classList.add('stavka');
               stavkaDiv.innerHTML = `
                 <label>Proizvod ID:</label>
-                <input type="number" class="proizvod-id" required min="1" />
+                <input type="number" class="proizvod-id" required min="0" />
                 <label>Količina:</label>
-                <input type="number" class="kolicina" required min="1" />
+                <input type="number" class="kolicina" required min="0" />
               `;
               stavkeContainer.appendChild(stavkaDiv);
             });
@@ -353,7 +395,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('http://127.0.0.1:5000/dodaj_stavke', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ racun_id: currentRacunId, stavke }),
+                  body: JSON.stringify({ 
+                    stavke: stavke.map(stavka => ({
+                      ...stavka,
+                      racun_id: currentRacunId
+                    }))
+                  }),
                 });
 
                 const data = await response.json();
@@ -393,11 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       stavkeContainer.appendChild(stavkaDiv);
     });
-  
-    // Show the "Dodaj Proizvod" form when the button is clicked
-    document.getElementById('dodaj-proizvod-button').addEventListener('click', () => {
-        document.getElementById('dodaj-proizvod-container').style.display = 'block';
-    });
+   
 
     // Handle the form submission
     document.getElementById('dodaj-proizvod-form').addEventListener('submit', async (event) => {
@@ -1325,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         class="kolicina-input" 
                                                         data-proizvod-id="${item.proizvod_id}"
                                                         value="${item.nabava_kolicina}"
-                                                        min="1"
+                                                        min="0"
                                                         required
                                                     />
                                                 </td>
@@ -1425,6 +1468,231 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error(error);
         alert('Greška pri procesiranju nabave.');
+      }
+    }
+ 
+
+    // Add event listener for "Novi Predračun" form submission
+    document.getElementById('novi-predracun-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+      
+        let kupacId = document.getElementById('kupac-id-predracun').value;
+        const zaposlenikId = document.getElementById('zaposlenik-id-predracun').value;
+        const nacinPlacanja = document.getElementById('nacin-placanja-predracun').value;
+      
+        if (kupacId === '') {
+          kupacId = null;
+        }
+      
+        try {
+          const response = await fetch('http://127.0.0.1:5000/novi_predracun', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kupac_id: kupacId, zaposlenik_id: zaposlenikId, nacin_placanja: nacinPlacanja }),
+          });
+      
+          const data = await response.json();
+          if (data.success) {
+            currentPredracunId = data.predracun_id;
+            alert(`Predračun kreiran s ID: ${currentPredracunId}`);
+            // Show the popup for adding stavke
+            popup.innerHTML = `
+              <h2>Dodaj Stavke za Predračun ID: ${currentPredracunId}</h2>
+              <form id="dodaj-stavke-form">
+                <div id="stavke-container">
+                  <div class="stavka">
+                    <label>Proizvod ID:</label>
+                    <input type="number" class="proizvod-id" required min="0" />
+                    <label>Količina:</label>
+                    <input type="number" class="kolicina" required min="0" />
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                  <button type="button" id="add-stavka">Dodaj Još</button>
+                  <button type="submit">Pošalji Stavke</button>
+                </div>
+              </form>
+              <button class="close-popup" id="close-popup">Zatvori</button>
+            `;
+            popup.style.display = 'flex';
+
+            // Attach event listeners after the form is created
+            document.getElementById('close-popup').addEventListener('click', () => {
+              popup.style.display = 'none';
+            });
+
+            document.getElementById('add-stavka').addEventListener('click', () => {
+              const stavkeContainer = document.getElementById('stavke-container');
+              const stavkaDiv = document.createElement('div');
+              stavkaDiv.classList.add('stavka');
+              stavkaDiv.innerHTML = `
+                <label>Proizvod ID:</label>
+                <input type="number" class="proizvod-id" required min="0" />
+                <label>Količina:</label>
+                <input type="number" class="kolicina" required min="0" />
+              `;
+              stavkeContainer.appendChild(stavkaDiv);
+            });
+
+            document.getElementById('dodaj-stavke-form').addEventListener('submit', async (e) => {
+              e.preventDefault();
+              
+              const stavke = Array.from(document.querySelectorAll('#stavke-container .stavka')).map((stavka) => ({
+                proizvod_id: stavka.querySelector('.proizvod-id').value,
+                kolicina: stavka.querySelector('.kolicina').value,
+              }));
+
+              try {
+                const response = await fetch('http://127.0.0.1:5000/dodaj_stavke', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    stavke: stavke.map(stavka => ({
+                      ...stavka,
+                      predracun_id: currentPredracunId
+                    }))
+                  }),
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                  alert('Stavke uspješno dodane!');
+                  popup.style.display = 'none';
+                  document.getElementById('dodaj-stavke-form').reset();
+                  document.getElementById('stavke-container').innerHTML = '';
+                  // Reload the "predračun" table
+                  await fetchAndDisplayData('pregled_predracuna');
+                } else {
+                  alert(`Greška: ${data.error}`);
+                }
+              } catch (error) {
+                console.error(error);
+                alert('Greška pri dodavanju stavki.');
+              }
+            });
+          } else {
+            alert(`Greška: ${data.error}`);
+          }
+        } catch (error) {
+          console.error(error);
+          alert('Greška pri kreiranju predračuna.');
+        }
+    });
+
+    // Add function to fetch predračun details
+    async function fetchPredracunDetalji(predracunId) {
+      try {
+        const response = await fetch(`http://127.0.0.1:5000/predracun_detalji/${predracunId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch predracun details');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          renderPredracunPopup(data.predracun);
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Error fetching predračun details.');
+      }
+    }
+
+    // Add function to render predračun popup
+    function renderPredracunPopup(predracunDetails) {
+      if (!predracunDetails.length) {
+        alert('No details available for this predračun.');
+        return;
+      }
+
+      const predracunInfo = predracunDetails[0];
+      const stavkeList = predracunDetails.map(stavka => `
+        <tr>
+          <td>${stavka.proizvod_naziv || '-'}</td>
+          <td>${stavka.kolicina || '-'}</td>
+          <td>${stavka.cijena + ' €' || '-'}</td>
+          <td>${stavka.popust || '-'}</td>
+          <td>${stavka.nakon_popusta + ' €' || '-'}</td>
+        </tr>
+      `).join('');
+
+      const popupContent = `
+        <h2>Predračun ID: ${predracunInfo.predracun_id}</h2>
+        <p>Datum: ${new Date(predracunInfo.datum).toLocaleString()}</p>
+        <p>Kupac: ${predracunInfo.kupac_ime}</p>
+        <p>Zaposlenik: ${predracunInfo.zaposlenik_ime}</p>
+        <table class="receipt-table">
+          <thead>
+            <tr>
+              <th>Proizvod</th>
+              <th>Količina</th>
+              <th>Cijena</th>
+              <th>Popust</th>
+              <th>Nakon Popusta</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stavkeList}
+          </tbody>
+        </table>
+        <table class="total-table" style="margin-top: 10px;">
+          <tr>
+            <td><strong>Ukupno:</strong></td>
+            <td>${predracunInfo.ukupan_iznos + ' €' || '-'}</td>
+          </tr>
+        </table>
+        <button class="close-popup" id="close-popup">Zatvori</button>
+      `;
+
+      popup.innerHTML = popupContent;
+      popup.style.display = 'flex';
+
+      document.getElementById('close-popup').addEventListener('click', () => {
+        popup.style.display = 'none';
+      });
+    }
+
+    // Add functions to handle predračun actions
+    async function procesirajPredracun(predracunId) {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/procesiraj_predracun', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ predracun_id: predracunId }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Predračun uspješno procesiran!');
+          await fetchAndDisplayData('pregled_predracuna');
+        } else {
+          alert(`Greška: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Greška pri procesiranju predračuna.');
+      }
+    }
+
+    async function ponistiPredracun(predracunId) {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/ponisti_predracun', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ predracun_id: predracunId }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Predračun uspješno poništen!');
+          await fetchAndDisplayData('pregled_predracuna');
+        } else {
+          alert(`Greška: ${data.error}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Greška pri poništavanju predračuna.');
       }
     }
 
