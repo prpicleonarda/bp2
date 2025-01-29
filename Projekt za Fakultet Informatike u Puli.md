@@ -260,18 +260,33 @@ Prikazuje zaposlenike s najviše sveukupne generirane zarade te ih sortira prema
 ### 10. **Pogled: najprodavaniji_proizvodi**
 Prikazuje proizvode bazirano na sveukupnoj prodanoj količini.
 
-- **Opis**: Pogled grupira tablice proizvoda i računa s statusom "izvrseno", zbraja koliko je bilo prodanih proizvoda te onda ih prikazuje sortirane prema njihovoj uspješnosti.
-- **Upotreba**: Praćenje učinka zaposlenika.
+- **Opis**: Pogled grupira tablice proizvoda i računa s statusom "izvrseno", zbraja koliko je bilo prodanih proizvoda te onda ih prikazuje sortirane prema njihovoj sveukupnoj prodanoj količini.
+- **Upotreba**: Praćenje najprodavanijih proizvoda.
 
 ---
-### 9. **najprodavaniji_proizvodi** i **najbolja_zarada**
-Prikazuje najprodavanije proizvode.
+### 11. **najbolja_zarada**
+Prikazuje koji proizvodi su donijeli najviše.
 
-- **Opis**: Pogled grupira tablice zaposlenika i računa s statusom "izvrseno", zbraja koliko je koji zaposlenik izdao računa te onda prikazuje zaposlenike sortirane prema njihovoj uspješnosti.
-- **Upotreba**: Praćenje učinka zaposlenika.
+- **Opis**: Pogled grupira tablice proizvoda i računa s statusom "izvrseno", zbraja koliko je sveukupno prometa generirano od kojeg proizvoda te ih onda sortira prema donesenoj zaradi.
+- **Upotreba**: Praćenje proizvoda koji donose najviše zarade.
 
 ---
 
+### 12. **svi_proizvodi**
+Prikazuje koji se sve proizvodi nalaza u inventaru.
+
+- **Opis**: Pogled grupira tablice proizvoda i inventar te prikazuje njihove nazive, cijene i količinu.
+- **Upotreba**: Praćenje proizvoda koji se nalaze u inventaru.
+
+---
+
+### 13. **svi_proizvodi_lokacija**
+Prikazuje koji proizvodi su donijeli najviše.
+
+- **Opis**: Pogled grupira tablice proizvoda i inventar te prikazuje njihove nazive, cijene i količinu te ih sortira po gradovima.
+- **Upotreba**: Praćenje proizvoda koji se nalaze u inventaru po lokacijama.
+
+---
 ## Procedure
 
 ### 1. **racun_detalji**
