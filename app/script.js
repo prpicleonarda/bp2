@@ -8,8 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stavkeContainer = document.getElementById('stavke-container');
     const addStavkaButton = document.getElementById('add-stavka');
     const loginForm = document.getElementById('login-form');
-    const kupacView = document.getElementById('kupac-view');
-    const zaposlenikView = document.getElementById('zaposlenik-view');
+    const kupacView = document.getElementById('kupac-view'); 
     const adminView = document.getElementById('admin-view');
     const loginView = document.getElementById('login-view');
     const loginButton = document.getElementById('login-button');
@@ -681,8 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function logout() {
         loginButton.textContent = 'Login';
         loginButton.onclick = showLogin;
-        adminView.style.display = 'none';
-        zaposlenikView.style.display = 'none';
+        adminView.style.display = 'none'; 
         document.getElementById('restricted-view').style.display = 'none';
         kupacView.style.display = 'block';
         cartButton.style.display = 'flex'; // Show cart button
@@ -711,9 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (data.role === 'admin') {
                     adminView.style.display = 'block';
-                } else if (data.role === 'zaposlenik') {
-                    zaposlenikView.style.display = 'block';
-                }
+                }  
             } else {
                 alert('Invalid credentials');
             }

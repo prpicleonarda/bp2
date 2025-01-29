@@ -21,8 +21,7 @@ mysql = MySQL(app)
 
 # Dummy user data
 users = {
-    'admin': {'password': 'adminpass', 'role': 'admin'},
-    'zaposlenik': {'password': 'zappass', 'role': 'zaposlenik'},
+    'admin': {'password': 'adminpass', 'role': 'admin'}, 
     'kupac': {'password': 'kupacpass', 'role': 'kupac'}
 }
 
@@ -77,7 +76,7 @@ def get_lokacija_trgovine_id():
 @app.route('/pregled_racuna', methods=['GET'])
 def get_pregled_racuna():
     cur = mysql.connection.cursor()
-    cur.execute(''' SELECT * FROM pregled_racuna ''')
+    cur.execute(''' SELECT * FROM pregled_racuna ORDER BY datum DESC''')
     data = cur.fetchall()
     cur.close()
     return jsonify(data)
@@ -428,7 +427,7 @@ def get_najbolja_zarada():
 def get_narudzbe():
     try:
         cur = mysql.connection.cursor()
-        cur.execute('SELECT * FROM narudzba')  # Fetch from the view
+        cur.execute('SELECT * FROM narudzba ORDER BY datum DESC')  # Added ORDER BY
         data = cur.fetchall()
         cur.close()
         return jsonify(data)
@@ -439,7 +438,7 @@ def get_narudzbe():
 def get_nabava():
     try:
         cur = mysql.connection.cursor()
-        cur.execute('SELECT * FROM nabava')  # Fetch from the view
+        cur.execute('SELECT * FROM nabava ORDER BY datum DESC')  # Added ORDER BY
         data = cur.fetchall()
         cur.close()
         return jsonify(data)
@@ -593,7 +592,7 @@ def get_nabava_ispis(lokacija_id):
 def get_pregled_predracuna():
     try:
         cur = mysql.connection.cursor()
-        cur.execute('SELECT * FROM pregled_predracuna')
+        cur.execute('SELECT * FROM pregled_predracuna ORDER BY datum DESC')  # Added ORDER BY
         data = cur.fetchall()
         cur.close()
         return jsonify(data)
