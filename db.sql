@@ -220,6 +220,19 @@ CREATE OR REPLACE VIEW pregled_racuna AS
 		LEFT JOIN stavka AS s ON s.racun_id = r.id
 		GROUP BY r.id;
 
+-- DETALJNIJI PREGLED PREDRACUNA
+CREATE OR REPLACE VIEW pregled_predracuna AS
+SELECT p.id AS predracun_id, 
+			CONCAT(k.ime, ' ', k.prezime) AS kupac, 
+			CONCAT(z.ime, ' ', z.prezime) AS zaposlenik, 
+			datum, status, 
+			SUM(nakon_popusta) AS ukupan_iznos
+		FROM predracun AS p
+		INNER JOIN zaposlenik AS z ON p.zaposlenik_id = z.id
+		LEFT JOIN kupac AS k ON p.kupac_id = k.id
+		LEFT JOIN stavka AS s ON s.predracun_id = p.id
+		GROUP BY p.id;
+
 -- POGLED ZA KUPCE SA NAJVECIM BROJEM RACUNA
 
 CREATE OR REPLACE VIEW najcesci_kupci AS
@@ -360,6 +373,11 @@ BEGIN
 		
 		SET p_id = JSON_UNQUOTE(JSON_EXTRACT(json_data, CONCAT('$[', i, '].proizvod_id')));
 		SET kol = JSON_UNQUOTE(JSON_EXTRACT(json_data, CONCAT('$[', i, '].kolicina')));
+
+        IF p_id NOT IN (SELECT id FROM proizvod) THEN 
+            ROLLBACK;
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = "Nepojstojeci proizvod ID unesen";
+        END IF;
 
 		IF JSON_EXTRACT(json_data, CONCAT('$[', i, '].predracun_id')) IS NOT NULL THEN
 			SET pr_id = JSON_UNQUOTE(JSON_EXTRACT(json_data, CONCAT('$[', i, '].predracun_id')));
@@ -892,6 +910,28 @@ BEGIN
 END //
 DELIMITER ;
 
+-- SVE POTREBNE INFORMACIJE O POJEDINOJ NARUDZBI
+
+DELIMITER //
+
+CREATE PROCEDURE narudzba_detalji(IN n_id INT)
+BEGIN
+    SELECT 
+        n.id AS narudzba_id,
+        n.datum,
+        n.status, 
+        s.proizvod_naziv,
+        s.kolicina,
+        s.cijena, 
+        (SELECT SUM(s2.cijena*s2.kolicina) FROM stavka s2 WHERE s2.narudzba_id = n.id) AS ukupan_iznos
+    FROM narudzba n 
+    LEFT JOIN kupac k ON n.kupac_id = k.id
+    LEFT JOIN stavka s ON s.narudzba_id = n.id
+    WHERE n.id = n_id;
+END //
+DELIMITER ;
+
+
 -- POGLED ZA LOKACIJE I IMENA ODJELA NA TIM LOKACIJAMA
 
 CREATE OR REPLACE VIEW pregled_lokacija_sa_odjelima AS
@@ -925,14 +965,13 @@ CREATE OR REPLACE VIEW pregled_proizvoda AS
     LEFT JOIN kategorija k ON p.kategorija_id = k.id 
     LEFT JOIN odjel o ON k.odjel_id = o.id;
  
-DELIMITER //
 
+DELIMITER //
 CREATE PROCEDURE predracun_detalji(IN p_id INT)
 BEGIN
     SELECT 
         p.id AS predracun_id,
-        p.datum,
-        p.nacin_placanja,
+        p.datum, 
         (SELECT grad
 FROM lokacija
             WHERE id =(SELECT lokacija_id 

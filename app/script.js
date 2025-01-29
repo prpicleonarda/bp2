@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
     let currentRacunId = null;
     let proizvodi = [];
+    let odabrani_proizvodi = [];
+    let currentFilter = null;
   
     // Show kupac view initially
     kupacView.style.display = 'block';
@@ -87,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     async function fetchAndDisplayData(route) {
       try {
-        const response = await fetch(`http://127.0.0.1:5000/${route}`);
+        const response = await fetch(`http://127.00.1:5000/${route}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch data from /${route}`);
         }
@@ -238,6 +240,41 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             actionTd.appendChild(ponistiButton);
           }
+        } else if (route === 'pregled_narudzba') {
+          tr.addEventListener('click', () => fetchNarudzbaDetalji(row.narudzba_id || row.id));
+          
+          // Add buttons based on status
+          if (status === 'na cekanju') {
+            // Add "Procesiraj" button
+            const procesirajButton = document.createElement('button');
+            procesirajButton.textContent = 'Procesiraj';
+            procesirajButton.style.backgroundColor = '#4CAF50';
+            procesirajButton.style.color = 'white';
+            procesirajButton.style.border = 'none';
+            procesirajButton.style.padding = '5px 10px';
+            procesirajButton.style.borderRadius = '5px';
+            procesirajButton.style.cursor = 'pointer';
+            procesirajButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                procesirajNarudzbu(row.narudzba_id || row.id);
+            });
+            actionTd.appendChild(procesirajButton);
+
+            // Add "Ponisti" button
+            const ponistiButton = document.createElement('button');
+            ponistiButton.textContent = 'Ponisti';
+            ponistiButton.style.backgroundColor = '#f44336';
+            ponistiButton.style.color = 'white';
+            ponistiButton.style.border = 'none';
+            ponistiButton.style.padding = '5px 10px';
+            ponistiButton.style.borderRadius = '5px';
+            ponistiButton.style.cursor = 'pointer';
+            ponistiButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                ponistiNarudzbu(row.narudzba_id || row.id);
+            });
+            actionTd.appendChild(ponistiButton);
+          }
         }
         
         tr.appendChild(actionTd);
@@ -313,11 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="close-popup" id="close-popup">Zatvori</button>
       `;
   
+      const overlay = document.getElementById('overlay');
+      overlay.style.display = 'block';
+  
       popup.innerHTML = popupContent;
       popup.style.display = 'flex';
   
       document.getElementById('close-popup').addEventListener('click', () => {
         popup.style.display = 'none';
+        overlay.style.display = 'none';
       });
     }
   
@@ -351,17 +392,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="stavke-container">
                   <div class="stavka">
                     <label>Proizvod ID:</label>
-                    <input type="number" class="proizvod-id" required min="0" />
+                    <input type="number" class="proizvod-id" required min="0" value="0"  />
                     <label>Količina:</label>
-                    <input type="number" class="kolicina" required min="0" />
+                    <input type="number" class="kolicina" required min="0" value="0" />
                   </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                   <button type="button" id="add-stavka">Dodaj Još</button>
-                  <button type="submit">Pošalji Stavke</button>
+                  <button id="close-popup" type="submit">Pošalji Stavke</button>
                 </div>
-              </form>
-              <button class="close-popup" id="close-popup">Zatvori</button>
+              </form> 
             `;
             popup.style.display = 'flex';
 
@@ -376,9 +416,9 @@ document.addEventListener('DOMContentLoaded', () => {
               stavkaDiv.classList.add('stavka');
               stavkaDiv.innerHTML = `
                 <label>Proizvod ID:</label>
-                <input type="number" class="proizvod-id" required min="0" />
+                <input type="number" class="proizvod-id" required min="0" value="0"  />
                 <label>Količina:</label>
-                <input type="number" class="kolicina" required min="0" />
+                <input type="number" class="kolicina" required min="0" value="0"  />
               `;
               stavkeContainer.appendChild(stavkaDiv);
             });
@@ -413,6 +453,24 @@ document.addEventListener('DOMContentLoaded', () => {
                   await fetchAndDisplayData('pregled_racuna');
                 } else {
                   alert(`Greška: ${data.error}`);
+                  try {
+                    const response = await fetch('http://127.0.0.1:5000/ponisti_racun_bez', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ racun_id: currentRacunId}),
+                    });
+            
+                    const data = await response.json();
+                    if (data.success) {
+                      alert('Račun uspješno poništen!');
+                      await fetchAndDisplayData('pregled_racuna');
+                    } else {
+                      alert(`Greška: ${data.error}`);
+                    }
+                  } catch (error) {
+                    console.error(error);
+                    alert('Greška pri poništavanju računa.');
+                  }
                 }
               } catch (error) {
                 console.error(error);
@@ -434,9 +492,9 @@ document.addEventListener('DOMContentLoaded', () => {
       stavkaDiv.classList.add('stavka');
       stavkaDiv.innerHTML = `
         <label>Proizvod ID:</label>
-        <input type="number" class="proizvod-id" required />
+        <input type="number" class="proizvod-id" required value="0"  />
         <label>Količina:</label>
-        <input type="number" class="kolicina" required />
+        <input type="number" class="kolicina" required value="0" />
       `;
       stavkeContainer.appendChild(stavkaDiv);
     });
@@ -444,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle the form submission
     document.getElementById('dodaj-proizvod-form').addEventListener('submit', async (event) => {
-        event.preventDefault(); // Prevent the default form submission
+        event.preventDefault();
   
       const naziv = document.getElementById('naziv').value;
       const nabavnaCijena = document.getElementById('nabavna-cijena').value;
@@ -469,9 +527,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             if (result.success) {
                 alert('Proizvod je uspješno dodan!');
-                // Optionally, you can reset the form or hide it
+                // Reset the form but don't hide it
                 document.getElementById('dodaj-proizvod-form').reset();
-                document.getElementById('dodaj-proizvod-container').style.display = 'none';
+                // Reload the products table
+                await fetchAndDisplayData('pregled_proizvoda');
         } else {
                 alert('Greška: ' + result.error);
         }
@@ -609,12 +668,26 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.disabled = false;
         }
     });
+   
   
-    // Close popup
-    closePopup.addEventListener('click', () => {
-      popup.style.display = 'none';
-    });
-  
+    const cartButton = document.querySelector('.floating-cart-button');
+
+    function showLogin() {
+        document.getElementById('kupac-view').style.display = 'none';
+        document.getElementById('login-view').style.display = 'block';
+        cartButton.style.display = 'none'; // Hide cart button
+    }
+
+    function logout() {
+        loginButton.textContent = 'Login';
+        loginButton.onclick = showLogin;
+        adminView.style.display = 'none';
+        zaposlenikView.style.display = 'none';
+        document.getElementById('restricted-view').style.display = 'none';
+        kupacView.style.display = 'block';
+        cartButton.style.display = 'flex'; // Show cart button
+    }
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const userId = document.getElementById('user-id').value;
@@ -632,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginView.style.display = 'none';
                 loginButton.textContent = 'Logout';
                 loginButton.onclick = logout;
+                cartButton.style.display = 'none'; // Hide cart button
                 if (data.role === 'admin' || data.role === 'zaposlenik') {
                     document.getElementById('restricted-view').style.display = 'block';
                 }
@@ -648,15 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Error during login');
         }
     });
-
-    function logout() {
-        loginButton.textContent = 'Login';
-        loginButton.onclick = showLogin;
-        adminView.style.display = 'none';
-        zaposlenikView.style.display = 'none';
-        document.getElementById('restricted-view').style.display = 'none';
-        kupacView.style.display = 'block';
-    }
 
     // Fetch and display odjeli, kategorije, and proizvodi
     async function fetchAndDisplayOdjeliKategorijeProizvodi() {
@@ -698,8 +763,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function filterProizvodi(type, value) {
-      const filteredProizvodi = proizvodi.filter((proizvod) => proizvod[type] === value);
-      renderProizvodi(filteredProizvodi);
+        // Store the current filter
+        currentFilter = { type, value };
+        const filteredProizvodi = proizvodi.filter((proizvod) => proizvod[type] === value);
+        // Apply current sort order to filtered products
+        const currentSortOrder = sortBySelect.value;
+        renderProizvodi(sortProizvodi(filteredProizvodi, currentSortOrder));
+    }
+
+    function sortProizvodi(productsToSort, order) {
+        return [...productsToSort].sort((a, b) => {
+            const priceA = parseFloat(a.prodajna_cijena);
+            const priceB = parseFloat(b.prodajna_cijena);
+            return order === 'asc' ? priceA - priceB : priceB - priceA;
+        });
+    }
+
+    function updateCartCount() {
+      const cartCount = document.querySelector('.cart-count');
+      cartCount.textContent = odabrani_proizvodi.length;
     }
 
     function renderProizvodi(proizvodiData) {
@@ -712,24 +794,34 @@ document.addEventListener('DOMContentLoaded', () => {
           <img src="assets/${proizvod.id}.jpg" alt="${proizvod.naziv}" />
           <h4>${proizvod.naziv}</h4> 
           <p>Prodajna Cijena: ${proizvod.prodajna_cijena} €</p> 
+          <button class="add-product" data-id="${proizvod.id}" style="width: 50px; height: 50px; border-radius: 50%; margin:0 auto;">+</button>
         `;
         grid.appendChild(div);
+      });
+
+      // Update add button event listener to update cart count
+      grid.querySelectorAll('.add-product').forEach(button => {
+        button.addEventListener('click', () => { 
+          const proizvodId = button.getAttribute('data-id');
+          odabrani_proizvodi.push(proizvodId); // Add the proizvod id to the proizvodi array
+          updateCartCount(); // Update the cart count display 
+        });
       });
     }
 
     sortBySelect.addEventListener('change', () => {
-      const sortOrder = sortBySelect.value;
-      sortProizvodi(sortOrder);
+        const sortOrder = sortBySelect.value;
+        if (currentFilter) {
+            // If there's a current filter, apply sort to filtered products
+            const filteredProizvodi = proizvodi.filter(
+                (proizvod) => proizvod[currentFilter.type] === currentFilter.value
+            );
+            renderProizvodi(sortProizvodi(filteredProizvodi, sortOrder));
+        } else {
+            // If no filter, sort all products
+            renderProizvodi(sortProizvodi(proizvodi, sortOrder));
+        }
     });
-
-    function sortProizvodi(order) {
-      const sortedProizvodi = [...proizvodi].sort((a, b) => {
-        const priceA = parseFloat(a.prodajna_cijena);
-        const priceB = parseFloat(b.prodajna_cijena);
-        return order === 'asc' ? priceA - priceB : priceB - priceA;
-      });
-      renderProizvodi(sortedProizvodi);
-    }
 
     // Call the function to fetch and display data
     fetchAndDisplayOdjeliKategorijeProizvodi();
@@ -1279,11 +1371,15 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="close-popup" id="close-popup">Zatvori</button>
         `;
 
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'block';
+  
         popup.innerHTML = popupContent;
         popup.style.display = 'flex';
-
+  
         document.getElementById('close-popup').addEventListener('click', () => {
             popup.style.display = 'none';
+            overlay.style.display = 'none';
         });
     }
 
@@ -1478,8 +1574,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
         let kupacId = document.getElementById('kupac-id-predracun').value;
         const zaposlenikId = document.getElementById('zaposlenik-id-predracun').value;
-        const nacinPlacanja = document.getElementById('nacin-placanja-predracun').value;
-      
+         
         if (kupacId === '') {
           kupacId = null;
         }
@@ -1488,7 +1583,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const response = await fetch('http://127.0.0.1:5000/novi_predracun', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ kupac_id: kupacId, zaposlenik_id: zaposlenikId, nacin_placanja: nacinPlacanja }),
+            body: JSON.stringify({ kupac_id: kupacId, zaposlenik_id: zaposlenikId }),
           });
       
           const data = await response.json();
@@ -1502,17 +1597,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="stavke-container">
                   <div class="stavka">
                     <label>Proizvod ID:</label>
-                    <input type="number" class="proizvod-id" required min="0" />
+                    <input type="number" class="proizvod-id" required min="0" value="0"  />
                     <label>Količina:</label>
-                    <input type="number" class="kolicina" required min="0" />
+                    <input type="number" class="kolicina" required min="0" value="0"  />
                   </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                   <button type="button" id="add-stavka">Dodaj Još</button>
-                  <button type="submit">Pošalji Stavke</button>
+                  <button id="close-popup" type="submit">Pošalji Stavke</button>
                 </div>
-              </form>
-              <button class="close-popup" id="close-popup">Zatvori</button>
+              </form> 
             `;
             popup.style.display = 'flex';
 
@@ -1527,9 +1621,9 @@ document.addEventListener('DOMContentLoaded', () => {
               stavkaDiv.classList.add('stavka');
               stavkaDiv.innerHTML = `
                 <label>Proizvod ID:</label>
-                <input type="number" class="proizvod-id" required min="0" />
+                <input type="number" class="proizvod-id" required min="0" value="0"  />
                 <label>Količina:</label>
-                <input type="number" class="kolicina" required min="0" />
+                <input type="number" class="kolicina" required min="0" value="0"  />
               `;
               stavkeContainer.appendChild(stavkaDiv);
             });
@@ -1645,11 +1739,15 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="close-popup" id="close-popup">Zatvori</button>
       `;
 
+      const overlay = document.getElementById('overlay');
+      overlay.style.display = 'block';
+  
       popup.innerHTML = popupContent;
       popup.style.display = 'flex';
-
+  
       document.getElementById('close-popup').addEventListener('click', () => {
         popup.style.display = 'none';
+        overlay.style.display = 'none';
       });
     }
 
@@ -1696,9 +1794,337 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    async function fetchNarudzbaDetalji(narudzbaId) {
+        try {
+            const response = await fetch(`http://127.0.0.1:5000/narudzba_detalji/${narudzbaId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch narudzba details');
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                renderNarudzbaPopup(data.narudzba);
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error fetching narudzba details.');
+        }
+    }
+
+    function renderNarudzbaPopup(narudzbaDetails) {
+        if (!narudzbaDetails.length) {
+            alert('No details available for this narudzba.');
+            return;
+        }
+
+        const narudzbaInfo = narudzbaDetails[0];
+        const stavkeList = narudzbaDetails.map(stavka => `
+            <tr>
+                <td>${stavka.proizvod_naziv || '-'}</td>
+                <td>${stavka.kolicina || '-'}</td>
+                <td>${stavka.cijena + ' €' || '-'}</td>
+            </tr>
+        `).join('');
+
+        const popupContent = `
+            <h2>Narudžba ID: ${narudzbaInfo.narudzba_id}</h2>
+            <p>Datum: ${new Date(narudzbaInfo.datum).toLocaleString()}</p> 
+            <table class="receipt-table">
+                <thead>
+                    <tr>
+                        <th>Proizvod</th>
+                        <th>Količina</th>
+                        <th>Cijena</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${stavkeList}
+                </tbody>
+            </table>
+            <table class="total-table" style="margin-top: 10px;">
+                <tr>
+                    <td><strong>Ukupno:</strong></td>
+                    <td>${narudzbaInfo.ukupan_iznos + ' €' || '-'}</td>
+                </tr>
+            </table>
+            <button class="close-popup" id="close-popup">Zatvori</button>
+        `;
+
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'block';
+  
+        popup.innerHTML = popupContent;
+        popup.style.display = 'flex';
+  
+        document.getElementById('close-popup').addEventListener('click', () => {
+            popup.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+    }
+
+    async function procesirajNarudzbu(narudzbaId) {
+        const zaposlenikId = prompt('Unesite ID zaposlenika:');
+        if (!zaposlenikId) {
+            return;
+        }
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/procesiraj_narudzbu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    narudzba_id: narudzbaId,
+                    zaposlenik_id: zaposlenikId
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Narudžba uspješno procesirana!');
+                await fetchAndDisplayData('pregled_narudzba');
+            } else {
+                alert(`Greška: ${data.error}`);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Greška pri procesiranju narudžbe.');
+        }
+    }
+
+    async function ponistiNarudzbu(narudzbaId) {
+        if (!confirm('Jeste li sigurni da želite poništiti narudžbu?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch('http://127.0.0.1:5000/ponisti_narudzbu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ narudzba_id: narudzbaId })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Narudžba uspješno poništena!');
+                await fetchAndDisplayData('pregled_narudzba');
+            } else {
+                alert(`Greška: ${data.error}`);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Greška pri poništavanju narudžbe.');
+        }
+    }
+
+    // Initialize cart count
+    updateCartCount();
+
+    // Add cart button click handler
+    document.querySelector('.floating-cart-button').addEventListener('click', showCartPopup);
+    document.getElementById('close-cart-popup').addEventListener('click', hideCartPopup);
+
+    async function showCartPopup() {
+        const cartPopup = document.getElementById('cart-popup');
+        const cartItemsContainer = document.getElementById('cart-items');
+        const overlay = document.getElementById('overlay');
+        
+        // Show overlay
+        overlay.style.display = 'block';
+        
+        // Fetch locations first
+        let locationsHTML = '<option value="">Odaberite lokaciju</option>';
+        try {
+            const response = await fetch('http://127.0.0.1:5000/lokacija_trgovine_id');
+            const locations = await response.json();
+            locationsHTML += locations.map(loc => 
+                `<option value="${loc.id}">${loc.grad}</option>`
+            ).join('');
+        } catch (error) {
+            console.error('Error fetching locations:', error);
+        }
+
+        // Group products by ID and count occurrences
+        const groupedProducts = odabrani_proizvodi.reduce((acc, id) => {
+            acc[id] = (acc[id] || 0) + 1;
+            return acc;
+        }, {});
+
+        let cartHTML = '';
+        
+        // Add Kupac ID and Location inputs at the top
+        cartHTML += `
+            <div style="margin-bottom: 20px; display: flex; gap: 20px;">
+                <div>
+                    <label for="cart-kupac-id" style="display: block; margin-bottom: 5px;">
+                        <strong>Kupac ID:</strong>
+                    </label>
+                    <input type="number" 
+                        id="cart-kupac-id" 
+                        required 
+                        min="1" 
+                        style="width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;"
+                    >
+                </div>
+                <div>
+                    <label for="cart-location" style="display: block; margin-bottom: 5px;">
+                        <strong>Lokacija:</strong>
+                    </label>
+                    <select 
+                        id="cart-location" 
+                        required
+                        style="width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 5px;"
+                    >
+                        ${locationsHTML}
+                    </select>
+                </div>
+            </div>
+        `;
+
+        // Create table for products
+        cartHTML += '<table class="receipt-table">' +
+            '<thead><tr>' +
+            '<th>Proizvod ID</th>' +
+            '<th>Naziv</th>' +
+            '<th>Količina</th>' +
+            '<th>Cijena</th>' +
+            '<th>Ukupno</th>' +
+            '</tr></thead><tbody>';
+
+        let totalPrice = 0;
+        
+        for (const [id, count] of Object.entries(groupedProducts)) {
+            const product = proizvodi.find(p => p.id.toString() === id);
+            const productName = product ? product.naziv : 'Nepoznat proizvod';
+            const price = product ? parseFloat(product.prodajna_cijena) : 0;
+            const itemTotal = price * count;
+            totalPrice += itemTotal;
+            
+            cartHTML += `
+                <tr>
+                    <td>${id}</td>
+                    <td>${productName}</td>
+                    <td>${count}</td>
+                    <td>${price.toFixed(2)} €</td>
+                    <td>${itemTotal.toFixed(2)} €</td>
+                </tr>
+            `;
+        }
+
+        cartHTML += '</tbody></table>';
+        
+        if (odabrani_proizvodi.length > 0) {
+            cartHTML += `
+                <table class="total-table" style="margin-top: 20px;">
+                    <tr class="total-row">
+                        <td style="text-align: right;"><strong>Ukupna Cijena:</strong></td>
+                        <td style="text-align: right; padding-left: 20px;"><strong>${totalPrice.toFixed(2)} €</strong></td>
+                    </tr>
+                </table>
+                <button id="submit-cart" 
+                    style="background-color: #4caf50; color: white; border: none; 
+                    padding: 10px 20px; border-radius: 5px; margin-top: 20px; 
+                    cursor: pointer; float: right;">
+                    Naruči
+                </button>
+            `;
+        } else {
+            cartHTML = '<p>Košarica je prazna</p>';
+        }
+
+        cartItemsContainer.innerHTML = cartHTML;
+        cartPopup.style.display = 'flex';
+
+        // Modify the submit button event listener
+        const submitButton = document.getElementById('submit-cart');
+        if (submitButton) {
+            submitButton.addEventListener('click', async () => {
+                const kupacId = document.getElementById('cart-kupac-id').value;
+                const locationId = document.getElementById('cart-location').value;
+                
+                if (!kupacId) {
+                    alert('Molimo unesite Kupac ID');
+                    return;
+                }
+                if (!locationId) {
+                    alert('Molimo odaberite lokaciju');
+                    return;
+                }
+
+                try {
+                    // First create the narudzba with selected location
+                    const narudzbaResponse = await fetch('http://127.0.0.1:5000/dodaj_narudzbu', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            lokacija_id: parseInt(locationId),
+                            kupac_id: kupacId
+                        })
+                    });
+
+                    const narudzbaData = await narudzbaResponse.json();
+                    if (narudzbaData.success) {
+                        // Prepare stavke from grouped products
+                        const stavke = Object.entries(groupedProducts).map(([id, count]) => ({
+                            proizvod_id: parseInt(id),
+                            kolicina: count,
+                            narudzba_id: narudzbaData.narudzba_id  // Use the ID from the response
+                        }));
+
+                        console.log('Sending stavke:', stavke); // Debug log
+
+                        // Add stavke to the narudzba
+                        const stavkeResponse = await fetch('http://127.0.0.1:5000/dodaj_stavke', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ stavke })
+                        });
+
+                        const stavkeData = await stavkeResponse.json();
+                        if (stavkeData.success) {
+                            alert('Narudžba uspješno kreirana!');
+                            // Clear the cart
+                            odabrani_proizvodi = [];
+                            updateCartCount();
+                            hideCartPopup();
+                        } else {
+                            // If stavke failed, we should cancel the narudzba
+                            alert(`Greška pri dodavanju stavki: ${stavkeData.error}`);
+                            try {
+                                await fetch('http://127.0.0.1:5000/ponisti_narudzbu', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ narudzba_id: narudzbaData.narudzba_id })
+                                });
+                            } catch (cancelError) {
+                                console.error('Error canceling order:', cancelError);
+                            }
+                        }
+                    } else {
+                        alert(`Greška pri kreiranju narudžbe: ${narudzbaData.error}`);
+                    }
+                } catch (error) {
+                    console.error('Error creating order:', error);
+                    alert('Greška pri kreiranju narudžbe.');
+                }
+            });
+        }
+    }
+
+    function hideCartPopup() {
+        const cartPopup = document.getElementById('cart-popup');
+        const overlay = document.getElementById('overlay');
+        
+        cartPopup.style.display = 'none';
+        overlay.style.display = 'none';
+    }
+
 });
 
+// Move showLogin outside the DOMContentLoaded event listener and update it
 function showLogin() {
     document.getElementById('kupac-view').style.display = 'none';
     document.getElementById('login-view').style.display = 'block';
+    document.querySelector('.floating-cart-button').style.display = 'none'; // Hide cart button
 }

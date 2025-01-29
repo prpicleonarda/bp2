@@ -255,6 +255,20 @@ def ponisti_racun():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/ponisti_racun_bez', methods=['POST'])
+def ponisti_racun_bez():
+    data = request.json
+    racun_id = data['racun_id'] 
+ 
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('ponisti_racun', [racun_id])
+        mysql.connection.commit()
+        cur.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/kupaci', methods=['GET'])
 def get_kupci():
     try:
@@ -440,10 +454,13 @@ def dodaj_narudzbu():
 
     try:
         cur = mysql.connection.cursor()
-        cur.execute('CALL stvori_narudzbu(%s, %s)', (l_id, k_id))  # Call the stored procedure
+        cur.callproc('stvori_narudzbu', [l_id, k_id])
+        # Get the last inserted ID
+        cur.execute("SELECT LAST_INSERT_ID() as narudzba_id")
+        narudzba_id = cur.fetchone()['narudzba_id']
         mysql.connection.commit()
         cur.close()
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'narudzba_id': narudzba_id})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -467,10 +484,11 @@ def dodaj_nabavu():
 def process_order():
     data = request.json
     narudzba_id = data['narudzba_id']
+    zaposlenik_id = data['zaposlenik_id']
     
     try:
         cur = mysql.connection.cursor()
-        cur.callproc('procesiraj_narudzbu', [narudzba_id])
+        cur.callproc('procesiraj_narudzbu', [narudzba_id, zaposlenik_id])
         mysql.connection.commit()
         cur.close()
         return jsonify({'success': True})
@@ -586,12 +604,11 @@ def get_pregled_predracuna():
 def novi_predracun():
     data = request.json
     k_id = data.get('kupac_id')
-    z_id = data['zaposlenik_id']
-    nacin_placanja = data['nacin_placanja']
+    z_id = data['zaposlenik_id'] 
 
     try:
         cur = mysql.connection.cursor()
-        cur.callproc('stvori_predracun', [k_id, z_id, nacin_placanja])
+        cur.callproc('stvori_predracun', [k_id, z_id])
         cur.execute("SELECT LAST_INSERT_ID() as predracun_id")
         predracun_id = cur.fetchone()['predracun_id']
         mysql.connection.commit()
@@ -637,5 +654,17 @@ def ponisti_predracun():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+
+@app.route('/narudzba_detalji/<int:narudzba_id>', methods=['GET'])
+def narudzba_detalji_full(narudzba_id):
+    try:
+        cur = mysql.connection.cursor()
+        cur.callproc('narudzba_detalji', [narudzba_id])
+        data = cur.fetchall()
+        cur.close()
+        return jsonify({'success': True, 'narudzba': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+        
 if __name__ == '__main__':
     app.run(debug=True)
