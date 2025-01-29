@@ -415,7 +415,62 @@ Poništava narudžbu ako još nije obrađena.
 ---
 
 
--- ================================================
+### **13. procesiraj_narudzbu**
+Obrađuje narudžbu i generira račun.
+
+- **Ulazni parametar**:  
+  - `n_id` (INT) – ID narudžbe.
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Provjerava je li narudžba već procesirana.
+  - Stvara račun i povezuje stavke narudžbe s računom.
+  - Provjerava dostupnost proizvoda u inventaru.
+  - Koristi **transakcije** kako bi osigurala konzistentnost podataka.
+
+---
+## **14. nabava_ispis**
+Generira popis proizvoda koji trebaju biti nabavljeni za određenu lokaciju.
+
+- **Ulazni parametar**:  
+  - `l_id` (INT) – ID lokacije.
+- **Izlaz**:  
+  - Privremena tablica s proizvodima koji trebaju biti nabavljeni.
+- **Opis**:  
+  - Provjerava količinu proizvoda u inventaru.
+  - Kreira popis proizvoda koji imaju nizak broj na stanju.
+  - Definira preporučenu količinu nabave ovisno o cijeni proizvoda.
+---
+## **15. `procesiraj_nabavu`**
+Obrađuje nabavu i dodaje proizvode u inventar.
+
+- **Ulazni parametar**:  
+  - `n_id` (INT) – ID nabave.
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Provjerava status nabave.
+  - Dodaje proizvode u inventar trgovine.
+  - Ažurira status nabave u **"izvrseno"**.
+
+  ---
+
+  ## **16. `dodaj_zaposlenika`**
+Dodaje novog zaposlenika u sustav.
+
+- **Ulazni parametri**:  
+  - `ime` (VARCHAR(50)) – Ime zaposlenika.  
+  - `prezime` (VARCHAR(50)) – Prezime zaposlenika.  
+  - `mjesto_rada` (INT) – ID lokacije gdje će zaposlenik raditi.  
+  - `placa` (DECIMAL(10, 2)) – Plaća zaposlenika.  
+  - `spol` (CHAR(1)) – Spol zaposlenika (M/Ž).  
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Procedura dodaje novog zaposlenika u tablicu `zaposlenik` i bilježi aktivnost u `evidencija`.
+---
+
+================================================
 -- OKIDAČ: stavka_cijene
 -- ================================================
 DELIMITER //
