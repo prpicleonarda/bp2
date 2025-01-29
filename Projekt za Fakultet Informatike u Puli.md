@@ -471,25 +471,50 @@ Dodaje novog zaposlenika u sustav.
 ---
 
 ================================================
--- OKIDAČ: stavka_cijene
--- ================================================
-DELIMITER //
+## **Triggeri (Okidači) u bazi podataka**
 
+Ovi triggeri automatski izvršavaju određene radnje pri unosu, ažuriranju ili brisanju podataka u tablicama. Oni osiguravaju dosljednost podataka i pojednostavljuju poslovnu logiku.
+
+---
+
+### **1. `stavka_cijene`**
+**Automatski postavlja cijenu i popust na stavke računa, predračuna, nabave i narudžbi.**
+
+- **Tip trigera**: `BEFORE INSERT`
+- **Tablica**: `stavka`
+- **Opis**:  
+  - Kada se umetne nova stavka u tablicu `stavka`, ovaj trigger automatski postavlja **cijenu i popuste** na temelju tipa dokumenta.
+  - Ako se stavka dodaje u **nabavu**, koristi **nabavnu cijenu proizvoda**.
+  - Ako se stavka dodaje u **račun**, koristi **prodajnu cijenu proizvoda** i računa popuste na temelju kupca.
+  - Podržava različite vrste popusta:
+    - **Količinski popust** (`popust_tip = 'kolicina'`), ako kupac kupi više od 3 proizvoda.
+    - **Klupski popust** (`popust_tip = 'klub'`), ako je kupac član kluba.
+    - **Poslovni popust**, ako je kupac poslovni korisnik.
+
+```sql
+DELIMITER //
 CREATE TRIGGER stavka_cijene
 BEFORE INSERT ON stavka
 FOR EACH ROW
 BEGIN
     DECLARE kl_id, ku_id INT;
+    
+    -- Dohvaćanje tipa popusta proizvoda
     SET @popust_tip = (SELECT popust_tip FROM proizvod WHERE id = NEW.proizvod_id);
+    
+    -- Postavljanje naziva proizvoda u stavku
     SET NEW.proizvod_naziv = (SELECT naziv FROM proizvod WHERE id = NEW.proizvod_id);
     
+    -- Ako je stavka dio NABAVE -> koristi se nabavna cijena
     IF NEW.nabava_id IS NOT NULL THEN
         SET NEW.cijena = (SELECT nabavna_cijena FROM proizvod WHERE id = NEW.proizvod_id);
         SET NEW.ukupan_iznos = NEW.cijena * NEW.kolicina;
     ELSE
+        -- Ako je stavka dio RAČUNA ili NARUDŽBE -> koristi se prodajna cijena
         SET NEW.cijena = (SELECT prodajna_cijena FROM proizvod WHERE id = NEW.proizvod_id);
         SET NEW.ukupan_iznos = NEW.cijena * NEW.kolicina;
         
+        -- Dohvaćanje kupca iz različitih tipova dokumenata
         IF (NEW.predracun_id IS NOT NULL) THEN
             SET ku_id = (SELECT kupac_id FROM predracun WHERE id = NEW.predracun_id); 
         END IF;
@@ -501,90 +526,149 @@ BEGIN
         END IF;
     END IF;
     
-    IF @popust_tip = "kolicina" AND NEW.kolicina >=3 THEN
-        SET NEW.popust = 15;
+    -- Primjena popusta na temelju tipa proizvoda i kupca
+    IF @popust_tip = "kolicina" AND NEW.kolicina >= 3 THEN
+        SET NEW.popust = 15; -- 15% popusta ako kupac kupi 3 ili više komada
     END IF;
     
     IF @popust_tip = "klub" THEN
+        -- Dohvaćanje kluba kupca i primjena popusta
         SET kl_id = (SELECT klub_id FROM kupac WHERE id = ku_id);
-        
         SET NEW.popust = (SELECT popust FROM klub WHERE id = kl_id);
     END IF;
     
+    -- Automatski popust od 25% za poslovne korisnike
     IF (SELECT tip FROM kupac WHERE id = ku_id) = "poslovni" THEN
         SET NEW.popust = 25;
     END IF;
     
+    -- Preračunavanje ukupne cijene nakon popusta
     SET NEW.nakon_popusta = IF(NEW.popust IS NULL, NEW.ukupan_iznos, NEW.ukupan_iznos * (1 - NEW.popust/100));
 END //
-
 DELIMITER ;
+```
+---
+### **2. `promocija_kupca`**
+ **Automatski promovira kupca na višu razinu članstva na temelju ukupne potrošnje.**
 
--- ================================================
--- UČITAVANJE PODATAKA
--- ================================================
+- **Tip trigera**: `AFTER UPDATE`
+- **Tablica**: `racun`
+- **Opis**:  
+  - Kada kupac obavi kupovinu, sistem provjerava **ukupnu potrošnju kupca**.
+  - Ako kupac **prijeđe određeni prag potrošnje**, automatski se **promovira u višu razinu članstva**.
+  - Postoje **tri razine članstva**:
+    - `Silver` (osnovna razina)
+    - `Gold` (potrošnja veća od **1000 EUR**)
+    - `Platinum` (potrošnja veća od **3000 EUR**)
+  - Članstvo omogućuje dodatne popuste i pogodnosti.
 
--- Podaci za klubove
-INSERT INTO klub(razina, popust) VALUES 
-("Silver", 5),
-("Gold", 10),
-("Platinum", 15);
+```sql
+DELIMITER //
+CREATE TRIGGER promocija_kupca
+AFTER UPDATE ON racun
+FOR EACH ROW
+BEGIN
+    DECLARE ukupna_potrosnja DECIMAL(10,2);
+    
+    -- Izračun ukupne potrošnje kupca na temelju svih računa
+    SET ukupna_potrosnja = (SELECT SUM(ukupan_iznos) FROM racun WHERE kupac_id = NEW.kupac_id AND status = 'izvrseno');
+    
+    -- Ako je potrošnja veća od 3000 EUR, kupac prelazi u Platinum razinu
+    IF ukupna_potrosnja >= 3000 THEN
+        UPDATE kupac 
+        SET klub_id = (SELECT id FROM klub WHERE razina = 'Platinum')
+        WHERE id = NEW.kupac_id;
+        
+        -- Bilježi promjenu u evidenciji
+        CALL stvori_zapis(CONCAT("Kupac ID(", NEW.kupac_id, ") promoviran u Platinum razinu."));
+        
+    -- Ako je potrošnja veća od 1000 EUR, kupac prelazi u Gold razinu
+    ELSEIF ukupna_potrosnja >= 1000 THEN
+        UPDATE kupac 
+        SET klub_id = (SELECT id FROM klub WHERE razina = 'Gold')
+        WHERE id = NEW.kupac_id;
+        
+        -- Bilježi promjenu u evidenciji
+        CALL stvori_zapis(CONCAT("Kupac ID(", NEW.kupac_id, ") promoviran u Gold razinu."));
+    END IF;
+END //
+DELIMITER ;
+```
+---
+### **3. `provjeri_tip`**
+ **Osigurava da se unosi samo valjani tip kupca ("privatni" ili "poslovni").**
 
--- Podaci za lokacije
-INSERT INTO lokacija(grad) VALUES 
-("Pula"),
-("Zagreb"),
-("Split"),
-("Zadar"),
-("Rijeka"),
-("Osijek");
+- **Tip trigera**: `BEFORE INSERT`
+- **Tablica**: `kupac`
+- **Opis**:  
+  - Prilikom dodavanja novog kupca, sistem provjerava da li je uneseni `tip` kupca ispravan.
+  - Ako tip kupca nije `"privatni"` ili `"poslovni"`, trigger sprječava unos i baca grešku.
+  - Ovim se osigurava da u bazi ne postoje nevaljani tipovi kupaca.
 
--- Podaci za odjele
-INSERT INTO odjel(naziv) VALUES 
-("Kućanski Uređaji"),
-("Elektronika"),
-("Vrt i sezona"),
-("Široka potrošnja");
+```sql
+DELIMITER //
+CREATE TRIGGER provjeri_tip
+BEFORE INSERT ON kupac
+FOR EACH ROW
+BEGIN
+    -- Provjera ispravnosti tipa kupca
+    IF NEW.tip NOT IN ('privatni', 'poslovni') THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Nevažeći tip kupca! Tip mora biti "privatni" ili "poslovni".';
+    END IF;
+END //
+DELIMITER ;
+```
+---
+### **4. `inventar_handler`**
+ **Ažurira stanje inventara nakon svake prodaje.**
 
--- Povezivanje odjela s lokacijama
-INSERT INTO odjel_na_lokaciji(odjel_id, lokacija_id) VALUES
-(1, 1),
-(2, 1),
-(3, 1),
-(4, 1),
-(1, 2),
-(2, 2),
-(3, 2),
-(4, 2),
-(1, 3),
-(2, 3),
-(3, 3),
-(4, 3);
+- **Tip trigera**: `AFTER INSERT`
+- **Tablica**: `stavka`
+- **Opis**:  
+  - Kada se doda nova stavka u račun, sistem automatski **smanjuje količinu proizvoda u inventaru**.
+  - Ovim se osigurava da podaci o zalihama uvijek budu ažurirani.
 
--- Podaci za zaposlenike
-INSERT INTO zaposlenik(ime, prezime, mjesto_rada, placa, spol) VALUES
-("Zvonimir", "Krtić", 1, 1200, "M"),
-("Viktor", "Lovreković", 1, 1200, "M"),
-("Lana", "Margetić", 2, 1300, "Ž"),
-("Ines", "Pavić", 2, 1250, "Ž");
+```sql
+DELIMITER //
+CREATE TRIGGER inventar_handler
+AFTER INSERT ON stavka
+FOR EACH ROW
+BEGIN
+    -- Ažuriranje količine proizvoda u inventaru
+    UPDATE inventar
+    SET kolicina = kolicina - NEW.kolicina
+    WHERE proizvod_id = NEW.proizvod_id;
+END //
+DELIMITER ;
+```
+## **Transakcije u bazi podataka**
+---
+### **1. `racun_detalji`**
+ **Osigurava sigurnost i konzistentnost podataka prilikom dohvaćanja stavki određenog računa.**
 
--- Podaci za kupce
-INSERT INTO kupac(ime, prezime, spol, adresa, email, tip, oib_firme, klub_id) VALUES
-("Krešimir", "Gavranić", "M", "Splitska 3", "kgavranic@gmail.com", "privatni", NULL, 1),
-("Luka", "Horvat", "M", "Istarska 7", "lhorvat@gmail.com", "poslovni", "12345678901", NULL),
-("Ana", "Perić", "Ž", "Dalmatinska 10", "aperic@gmail.com", "privatni", NULL, 2);
+- **Tip**: **Transakcija (`START TRANSACTION` / `COMMIT`)**
+- **Tablica**: `stavka`
+- **Opis**:  
+  - Koristi **transakciju** kako bi osigurao dosljedne podatke prilikom dohvaćanja stavki računa.
+  - Omogućuje sigurno izvršavanje upita unutar transakcije bez mogućnosti djelomičnih ili nekonzistentnih podataka.
+  - Ako dođe do greške, promjene se neće zapisati u bazu.
 
--- Podaci za kategorije proizvoda
-INSERT INTO kategorija(naziv, odjel_id) VALUES
-("Bijela tehnika", 1),
-("Hlađenje i grijanje", 1),
-("Audio i video", 2),
-("Računala", 2);
+```sql
+DELIMITER //
+CREATE PROCEDURE racun_detalji(IN r_id INT)
+BEGIN
+    -- Pokretanje transakcije
+    START TRANSACTION;
 
--- Podaci za proizvode
-INSERT INTO proizvod(naziv, nabavna_cijena, prodajna_cijena, kategorija_id, popust_tip) VALUES
-("Perilica rublja Končar", 180, 450, 1, "kolicina"),
-("Perilica rublja Candy", 150, 370, 1, NULL),
-("Klima uređaj LG", 300, 700, 2, "klub"),
-("TV Samsung", 400, 900, 3, NULL),
-("Laptop HP", 500, 1200, 4, "klub");
+    -- Dohvaćanje detalja računa i njegovih stavki
+    SELECT s.proizvod_id, p.naziv AS proizvod, s.kolicina, s.cijena, s.popust, s.nakon_popusta
+    FROM stavka s
+    JOIN proizvod p ON s.proizvod_id = p.id
+    WHERE s.racun_id = r_id;
+
+    -- Završavanje transakcije
+    COMMIT;
+END //
+DELIMITER ;
+```
+---
