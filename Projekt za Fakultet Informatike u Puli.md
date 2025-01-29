@@ -364,6 +364,57 @@ Procesira narudžbu i generira račun.
 
 ---
 
+## **9. stvori_nabavu**
+Kreira novi unos u tablici `nabava` za određenu lokaciju.
+
+- **Ulazni parametar**:  
+  - `l_id` (INT) – ID lokacije gdje se vrši nabava.
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Procedura dodaje novu nabavu u sustav za određenu trgovinu.
+
+  ---
+
+  ## **10. stvori_narudzbu**
+Dodaje novu narudžbu za kupca.
+
+- **Ulazni parametri**:  
+  - `l_id` (INT) – ID lokacije gdje se kreira narudžba.  
+  - `k_id` (INT) – ID kupca koji naručuje.
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Procedura dodaje novu narudžbu u sustav.
+
+  ---
+
+
+  ## **11. ponisti_nabavu**
+Poništava nabavu ako još nije izvršena.
+
+- **Ulazni parametar**:  
+  - `n_id` (INT) – ID nabave.
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Procedura mijenja status nabave u **"poništeno"**, ali samo ako je još **"na čekanju"**.
+
+---
+
+## **12. ponisti_narudzbu**
+Poništava narudžbu ako još nije obrađena.
+
+- **Ulazni parametar**:  
+  - `n_id` (INT) – ID narudžbe.
+- **Izlaz**:  
+  - Nema povratne vrijednosti.
+- **Opis**:  
+  - Procedura mijenja status narudžbe u **"poništeno"**.
+
+---
+
+
 -- ================================================
 -- OKIDAČ: stavka_cijene
 -- ================================================
