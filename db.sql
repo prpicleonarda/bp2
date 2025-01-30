@@ -315,7 +315,10 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE stvori_predracun(IN k_id INT, IN z_id INT)
 BEGIN
-	INSERT INTO predracun(kupac_id, zaposlenik_id) VALUES (k_id, z_id);
+    IF (SELECT tip FROM kupac WHERE id = k_id) != 'poslovni' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Odabrani kupac nije poslovni i nema pravo na predračun';
+    END IF;
+    INSERT INTO predracun(kupac_id, zaposlenik_id) VALUES (k_id, z_id);
     
     CALL stvori_zapis(CONCAT("Stvoren predracun ID(", LAST_INSERT_ID(), ")"));
 END //
@@ -1042,6 +1045,19 @@ WHERE id = (SELECT mjesto_rada FROM zaposlenik WHERE id = z.id))) AS lokacija,
     WHERE p.id = p_id;
 END //
 DELIMITER ;
+
+CREATE OR REPLACE VIEW najbolja_zarada_lokacija AS
+  SELECT grad, SUM(ukupan_iznos) AS ukupan_iznos
+      FROM (SELECT r.id AS racun_id, l.grad, datum, SUM(nakon_popusta) AS ukupan_iznos
+              FROM racun AS r
+              INNER JOIN stavka AS s ON r.id = s.racun_id
+              INNER JOIN lokacija AS l ON l.id = lokacija_zaposlenika(r.zaposlenik_id)
+              WHERE r.status = 'izvrseno'
+              GROUP BY r.id, l.id) AS podupit
+      WHERE DATE(datum) BETWEEN '2025-01-10' AND '2025-01-20'
+      GROUP BY grad
+      ORDER BY ukupan_iznos DESC
+      LIMIT 1;
 
 /*******************************************************************************
 		UCITAVANJE PODATAKA

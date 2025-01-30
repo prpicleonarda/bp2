@@ -618,7 +618,6 @@
         <button type="submit">Login</button>
       </form>
     </div>
- 
 
     <div id="admin-view" class="view" style="display: none;">
       <h2 style="text-align: center;">Admin</h2>
@@ -636,6 +635,87 @@
           <button class="data-fetch-button" id="evidencija">Evidencija</button>
         </div>
 
+        <div class="form-container" id="dodaj-proizvod-container" style="margin-bottom: 20px; display: none;">
+          <h2>Dodaj Proizvod</h2>
+          <form  id="dodaj-proizvod-form">
+            <label for="naziv">Naziv:</label>
+            <input type="text" id="naziv" required />
+    
+            <label for="nabavna-cijena">Nabavna Cijena:</label>
+            <input type="number" id="nabavna-cijena" required min="0" step="0.01" />
+    
+            <label for="prodajna-cijena">Prodajna Cijena:</label>
+            <input type="number" id="prodajna-cijena" required min="0" step="0.01" />
+    
+            <label for="kategorija-id">Kategorija ID:</label>
+            <input type="number" id="kategorija-id" required min="1" />
+    
+            <button type="submit">Dodaj Proizvod</button>
+          </form>
+        </div>
+
+        <div class="form-container" id="dodaj-kupca-container" style="display: none;">
+          <h2>Dodaj Kupca</h2>
+          <form id="dodaj-kupca-form">
+            <label for="ime">Ime:</label>
+            <input type="text" id="ime" required />
+    
+            <label for="prezime">Prezime:</label>
+            <input type="text" id="prezime" required />
+    
+            <label for="spol">Spol:</label>
+            <select id="spol" required>
+              <option value="M">M</option>
+              <option value="Ž">Ž</option>
+            </select>
+    
+            <label for="adresa">Adresa:</label>
+            <input type="text" id="adresa" required />
+    
+            <label for="email">Email:</label>
+            <input type="email" id="email" required />
+    
+            <label for="tip">Tip:</label>
+            <select id="tip" required>
+              <option value="privatni">privatni</option>
+              <option value="poslovni">poslovni</option>
+            </select>
+            
+            <div id="oib-container" style="margin-bottom: 20px; display: none;">
+              <label for="oib-firme">OIB:</label>
+              <input type="text" id="oib-firme" />
+            </div>
+    
+            <button type="submit">Dodaj Kupca</button>
+          </form>
+        </div>
+
+        <div class="form-container" id="dodaj-zaposlenika-container" style="margin-bottom: 20px; display: none;">
+            <h2>Dodaj Zaposlenika</h2>
+            <form id="dodaj-zaposlenika-form">
+                <label for="ime-zaposlenika">Ime:</label>
+                <input type="text" id="ime-zaposlenika" required />
+
+                <label for="prezime-zaposlenika">Prezime:</label>
+                <input type="text" id="prezime-zaposlenika" required />
+
+                <label for="mjesto_rada">ID mjesta rada:</label>
+                <input type="text" id="mjesto_rada" required />
+
+                <label for="placa">Placa:</label>
+                <input type="number" id="placa" required />
+
+                <label for="spol">Spol:</label>
+                <select id="spol" required>
+                    <option value="M">M</option>
+                    <option value="Ž">Ž</option>
+                </select>
+
+                <button type="submit">Dodaj Zaposlenika</button>
+            </form>
+        </div>
+
+        
         <!-- Add the views for Najprodavaniji Proizvodi and Najbolja Zarada -->
         <div class="tables-container" style="display: none; margin-bottom: 30px;">
           <div id="najprodavaniji-proizvodi-container" class="data-box">
@@ -721,85 +801,9 @@
           </form> 
         </div> 
   
-        <div class="form-container" id="dodaj-proizvod-container" style="display: none;">
-          <h2>Dodaj Proizvod</h2>
-          <form id="dodaj-proizvod-form">
-            <label for="naziv">Naziv:</label>
-            <input type="text" id="naziv" required />
-    
-            <label for="nabavna-cijena">Nabavna Cijena:</label>
-            <input type="number" id="nabavna-cijena" required min="0" step="0.01" />
-    
-            <label for="prodajna-cijena">Prodajna Cijena:</label>
-            <input type="number" id="prodajna-cijena" required min="0" step="0.01" />
-    
-            <label for="kategorija-id">Kategorija ID:</label>
-            <input type="number" id="kategorija-id" required min="1" />
-    
-            <button type="submit">Dodaj Proizvod</button>
-          </form>
-        </div>
+        
   
-        <div class="form-container" id="dodaj-kupca-container" style="display: none;">
-          <h2>Dodaj Kupca</h2>
-          <form id="dodaj-kupca-form">
-            <label for="ime">Ime:</label>
-            <input type="text" id="ime" required />
-    
-            <label for="prezime">Prezime:</label>
-            <input type="text" id="prezime" required />
-    
-            <label for="spol">Spol:</label>
-            <select id="spol" required>
-              <option value="M">M</option>
-              <option value="Ž">Ž</option>
-            </select>
-    
-            <label for="adresa">Adresa:</label>
-            <input type="text" id="adresa" required />
-    
-            <label for="email">Email:</label>
-            <input type="email" id="email" required />
-    
-            <label for="tip">Tip:</label>
-            <select id="tip" required>
-              <option value="privatni">privatni</option>
-              <option value="poslovni">poslovni</option>
-            </select>
-            
-            <div id="oib-container" style="display: none;">
-              <label for="oib-firme">OIB:</label>
-              <input type="text" id="oib-firme" />
-            </div>
-    
-            <button type="submit">Dodaj Kupca</button>
-          </form>
-        </div>
-
-        <div class="form-container" id="dodaj-zaposlenika-container" style="display: none;">
-            <h2>Dodaj Zaposlenika</h2>
-            <form id="dodaj-zaposlenika-form">
-                <label for="ime-zaposlenika">Ime:</label>
-                <input type="text" id="ime-zaposlenika" required />
-
-                <label for="prezime-zaposlenika">Prezime:</label>
-                <input type="text" id="prezime-zaposlenika" required />
-
-                <label for="mjesto_rada">ID mjesta rada:</label>
-                <input type="text" id="mjesto_rada" required />
-
-                <label for="placa">Placa:</label>
-                <input type="number" id="placa" required />
-
-                <label for="spol">Spol:</label>
-                <select id="spol" required>
-                    <option value="M">M</option>
-                    <option value="Ž">Ž</option>
-                </select>
-
-                <button type="submit">Dodaj Zaposlenika</button>
-            </form>
-        </div>
+        
 
         <!-- Add the views for Narudžbe and Nabava -->
         <div class="tables-container" style="display: none; margin-bottom: 30px;">

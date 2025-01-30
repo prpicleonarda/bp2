@@ -13,8 +13,8 @@ CORS(app,
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'root'
+app.config['MYSQL_USER'] = 'web'
+app.config['MYSQL_PASSWORD'] = 'web'
 app.config['MYSQL_DB'] = 'trgovina'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 mysql = MySQL(app)
@@ -22,7 +22,6 @@ mysql = MySQL(app)
 # Dummy user data
 users = {
     'admin': {'password': 'adminpass', 'role': 'admin'}, 
-    'kupac': {'password': 'kupacpass', 'role': 'kupac'}
 }
 
 @app.route('/')
@@ -555,16 +554,7 @@ def get_supply_report(lokacija_id):
         print('Error in get_supply_report:', str(e))  # Debug log
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/svi_proizvodi_lokacija', methods=['GET'])
-def get_all_products_by_location():
-    try:
-        cur = mysql.connection.cursor()
-        cur.execute('SELECT * FROM svi_proizvodi_lokacija')
-        data = cur.fetchall()
-        cur.close()
-        return jsonify(data)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+ 
 
 @app.route('/nabava_detalji/<int:nabava_id>', methods=['GET'])
 def get_nabava_detalji(nabava_id):
